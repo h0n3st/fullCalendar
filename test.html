@@ -8,28 +8,33 @@
 		<script src='node_modules/jquery/dist/jquery.min.js'></script>
 		<script src='node_modules/moment/min/moment.min.js'></script>
 		<script src='node_modules/fullcalendar/dist/fullcalendar.js'></script>
-		<script src='node_modules/fullcalendar-scheduler/dist/scheduler.js'></script>
 		<script src = "test.js"></script>
 
 		<script>
+			var calendar = new Calendar("#calendar");
+				var builder = new EditableEventBuilder(calendar);
 			$(document).ready(function() {
-				var calendar = new Calendar("#calendar");
-
+				
 				calendar.addView("month");
 				calendar.addView("agendaWeek");
 				calendar.addView("agendaDay");
 
 				calendar.setDefaultView("agendaWeek");
 
+				/*
 				calendar.addRessource(createRessource("radio", "Radiographie"));
 				calendar.addRessource(createRessource("dermo", "Dermatologie"));
+				*/
 
-				calendar.addEventDisponibility(createEvent("1","Disponibilité", "2018-01-26 13:00", "2018-01-26 14:00"));
-				calendar.addEvent(createEvent("3", "Rendez-vous", "2018-01-26 13:10", "2018-01-26 13:30"));
+				calendar.addEvent(builder.createEvent("3", "Rendez-vous", "2018-02-15 13:10", "2018-02-15 13:30"));
 
-				calendar.addEvent(createEvent("2","Rendez-vous", "2018-01-25 13:00", "2018-01-25 14:00"));
+				calendar.addEvent(builder.createEvent("2","Rendez-vous", "2018-02-15 13:00", "2018-02-15 14:00"));
 
 				calendar.print();
+
+				calendar.addEvent(builder.createEvent("4","DOES IT SHOW", "2018-02-15 12:00", "2018-02-15 14:00"));
+ 
+				calendar.print(); 
 			    // page is now ready, initialize the calendar...
 
 

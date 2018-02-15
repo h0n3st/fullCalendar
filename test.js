@@ -2,29 +2,16 @@
 class Calendar{
 	constructor(selector){
 		this.selector = selector;
-		this.ressources = [];
-		this.disponibilities = [];
+
 		this.events = [];
 		this.views = [];
 		this.defaultView = null;
+		this.printed = false;
 	}
 	print(){
-
-		var JSONressources = [];
-		for (var i = 0 ; i < this.ressources.length;i++){
-			JSONressources.push(this.ressources[i].toJSON());
-		}
-
-		var JSONevents = [];
-		for(var i = 0 ; i < this.events.length;i++){
-			JSONevents.push(this.events[i].toJSON());
-		}
-		for(var i = 0 ; i < this.disponibilities.length;i++){
-			JSONevents.push(this.disponibilities[i].toJSON());
-		}
-
-		$(this.selector).fullCalendar({
-	    	schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
+		var selector = this.selector;
+		var calendar = this;
+		$(selector).fullCalendar({
 	    	header:{
 	    		left: "prev,next today",
 	    		center:"title",
@@ -36,17 +23,49 @@ class Calendar{
 	    		start:"10:00",
 	    		end:"18:00"
 	    	},
-	    	ressources:JSONressources,
-	    	events:JSONevents
+	    	events:this.events,
+	    	eventDragStart: function( event, jsEvent, ui, view ) {
+	    		event.onEventDragStart();
+	    		var currEvent = calendar.getEvent(event.id);
+	    		currEvent.onEventDragStart();
+	    		currEvent.copyTo(event);
+	    		calendar.updateEvents();
+	    		console.log(calendar.getEvent(4).color);
+	    	},
+	    	eventDragStop: function(event,jsEvent,ui,view) {
+	    		var currEvent = calendar.getEvent(event.id);
+		    	currEvent.onEventDragStop();
+		    	currEvent.copyTo(event);
+		    	calendar.updateEvents();
+		    	console.log(calendar.getEvent(4).color);
+		    }
 	        // put your options and callbacks here
-	    })
+	    });
+	    this.printed = true;
+		
 	}
-
+	getEvent(id){ 	
+		event = null;
+		for(var i = 0 ; i < this.events.length; i++){
+			if(this.events[i].id == id){
+				event = this.events[i];
+				break;
+			}
+		}
+		return event;
+	}
+	printEvent(event){
+		$(this.selector).fullCalendar("renderEvent", event);
+	}
 	addView(view){
 		this.views.push(view);
 		if(this.defaultView == null){
 			this.setDefaultView(view);
 		}
+	}
+	
+	getDefaultView(){
+		return this.defaultView;
 	}
 
 	setDefaultView(view){
@@ -54,98 +73,152 @@ class Calendar{
 	}
 
 	getViewsList(){
-		var list = "";
-		if(this.views.length >= 1){
-			list += this.views[0];
-		}
-		for(var i = 1 ; i < this.views.length;i++){
-			list+= "," + this.views[i];
-		}
-		return list;
-	}
-
-	getDefaultView(){
-		return this.defaultView;
-	}
-	addRessource(ressource){
-
-		this.ressources.push(ressource);
-	}
-
-	addEventDisponibility(eventDisponibility){
-
-		this.disponibilities.push(eventDisponibility);
+		return this.views.join(",");
 	}
 
 	addEvent(event){
-
 		this.events.push(event);
-	}
-
-	isRessourceFree(ressourceId, start, end){
-		for(var i = 0 ; i < this.disponibilities ; i++){
-			var disponibility = this.disponibilities[i];
-			
-
+		if(this.printed){
+			this.printEvent(event);
 		}
 	}
-	
+
+	setEvent(event){
+		for(var i = 0 ; i < this.events.length ; i++){
+			if(this.events[i].id == event.id){
+				event.copyTo(this.events[i]);
+				break;
+			}
+		}
+		
+	}
+	updateEvents(){
+		$(this.selector).fullCalendar("updateEvents",this.events);	
+	}
 }
 
-function createRessource(id, title){
-	return new Ressource(id,title);
-}
-
-function createEvent(id, title, start, end){
-	return new AbstractEvent(id, title, start, end);
-}
-
-class Ressource{
-	constructor(id, title){
-		this.id = id;
-		this.title = title;
+class AbstractEventBuilder{
+	constructor(calendar){
+		this.calendar = calendar;
+	}
+	createEvent(id,title,start,end){
+		var event = this.instantiateEvent();
+		return this.fillEvent(event, id, title, start, end);
 	}
 
-	toJSON(){
-		return {"id":this.id,"title":this.title};
+	instantiateEvent(){
+		var event = new AbstractEvent();
+		return event;
 	}
+
+	fillEvent(event, id,title,start,end){
+		event.setId(id);
+		event.setTitle(title);
+		event.setStart(start);
+		event.setEnd(end);
+		return event;
+	}
+}
+
+class EditableEventBuilder extends AbstractEventBuilder{
+	constructor(calendar){
+		super(calendar);
+		this.calendar = calendar;
+	}
+	createEvent(id,title,start,end){
+		return this.fillEvent(this.instantiateEvent(), id, title, start, end);		
+	}
+
+	instantiateEvent(){
+		return new EditableEvent();
+	}
+
+	fillEvent(event, id, title, start, end){
+		event = super.fillEvent(event,id,title,start,end);
+		event.setEditable();
+		event.setColor("blue");
+		return event;
+	}
+}
+
+function copyEvent(event){
+	var newEvent = new AbstractEvent();
+	for (var key in event) {
+		newEvent[key] = event[key];
+	}
+	return newEvent;
 }
 
 class AbstractEvent{
-	constructor(id, title, start, end){
-		this.id = id;
-		this.title = title;
-		this.start = start;//new Date(start);
-		this.end = end;//new Date(end);
+	constructor(){
 		this.ressources = [];
-	}
-	toJSON(){
-		return {
-			"id":this.id,
-			"title":this.title,
-			"start":this.start,
-			"end":this.end
-		}
-	}
-	getStartTime(){
-		return this.start; //tmp
-	}
-	getEndTime(){
-		return this.end //tmp
 	}
 	addRessource(ressourceId){
 		this.ressources.push(ressourceId);
 	}
+	setId(id){
+		this.setProperty("id", id);
+	}
+	setTitle(title){
+		this.setProperty("title", title);
+	}
+	setStart(start){
+		this.setProperty("start", start);
+	}
+	setEnd(end){
+		this.setProperty("end", end);
+	}
+	setColor(color){
+		this.setProperty("color", color);
+	}
+	setEditable(){
+		this.setProperty("editable", true);
+	}
+	setProperty(key, value){
+		this[key] = value;
+	}
+	copy(){
+		return copyEvent(this);
+	}
+	copyTo(otherEvent){
+		for(var key in this){
+			otherEvent[key] = this[key];
+		}
+	}
+	onEventDragStart(){
+
+	}
+	onEventDragStop(){
+
+	}
 }
 
+class EditableEvent extends AbstractEvent{
+
+	onEventDragStart(){
+		this.setColor("red");
+	}
+
+	onEventDragStop(){
+		this.setColor("blue");
+	}
+}
 /*
-We need to have 2 views :
-	The client view
-		Here we simply need to show available ressources for the client research
-
-	The clinic view
-
-
+id	Optional. Useful for getEventSourceById.
+color	Sets every Event Object''s color for this source.
+backgroundColor	Sets every Event Object''s backgroundColor for this source.
+borderColor	Sets every Event Object''s borderColor for this source.
+textColor	Sets every Event Object''s textColor for this source.
+className	Sets every Event Object''s className for this source.
+editable	Sets every Event Object''s editable for this source.
+startEditable	Sets every Event Object''s startEditable for this source.
+durationEditable	Sets every Event Object''s durationEditable for this source.
+resourceEditable	Sets every Event Object''s resourceEditable for this source.
+rendering	Sets every Event Object''s rendering for this source.
+overlap	Sets every Event Object''s overlap for this source.
+constraint	Sets every Event Object''s constraint for this source.
+allDayDefault	Sets the allDayDefault option, but only for this source.
+eventDataTransform	Sets the eventDataTransform callback, but only for this source.
 
 */
 
