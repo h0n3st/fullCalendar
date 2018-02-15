@@ -25,18 +25,33 @@ class Calendar{
 	    	},
 	    	events:this.events,
 	    	eventClick: function(event, jsEvent, view){
+	    		calendar.getEvent(event.id).manageAction("click",event);
+
+	    		/*
 	    		var currEvent = calendar.getEvent(event.id);
+	    		currEvent.copyFrom(event);
 	    		currEvent.onEventClick(calendar, event);
+	    		*/
 	    		
 	    	},
 	    	eventDragStart: function(event, jsEvent, ui, view ) {
+	    		calendar.getEvent(event.id).manageAction("dragStart",event);
+
+	    		/*
 	    		var currEvent = calendar.getEvent(event.id);
+	    		currEvent.copyFrom(event);
 	    		currEvent.onEventDragStart(calendar, event);
+	    		*/
 
 	    	},
 	    	eventDragStop: function(event,jsEvent,ui,view) {
+	    		calendar.getEvent(event.id).manageAction("dragStop",event);
+
+	    		/*
 	    		var currEvent = calendar.getEvent(event.id);
+	    		currEvent.copyFrom(event);
 		    	currEvent.onEventDragStop(calendar, event);
+		    	*/
 		    	
 		    }
 	        // put your options and callbacks here
@@ -44,6 +59,26 @@ class Calendar{
 	    this.printed = true;
 		
 	}
+
+	addView(view){
+		this.addView(view,false);
+	}
+	addView(view, isDefault){
+		this.views.push(view);
+		if(this.defaultView == null || isDefault){
+			this.setDefaultView(view);
+		}
+	}
+	getDefaultView(){
+		return this.defaultView;
+	}
+	setDefaultView(view){
+		this.defaultView = view;
+	}
+	getViewsList(){
+		return this.views.join(",");
+	}
+
 	getEvent(id){ 	
 		event = null;
 		for(var i = 0 ; i < this.events.length; i++){
@@ -54,26 +89,18 @@ class Calendar{
 		}
 		return event;
 	}
-	printEvent(event){
-		$(this.selector).fullCalendar("renderEvent", event);
-	}
-	addView(view){
-		this.views.push(view);
-		if(this.defaultView == null){
-			this.setDefaultView(view);
+	
+	setEvent(event){
+		for(var i = 0 ; i < this.events.length ; i++){
+			if(this.events[i].id == event.id){
+				event.copyTo(this.events[i]);
+				break;
+			}
 		}
 	}
-	
-	getDefaultView(){
-		return this.defaultView;
-	}
 
-	setDefaultView(view){
-		this.defaultView = view;
-	}
-
-	getViewsList(){
-		return this.views.join(",");
+	printEvent(event){
+		$(this.selector).fullCalendar("renderEvent", event);
 	}
 
 	addEvent(event){
@@ -83,15 +110,6 @@ class Calendar{
 		}
 	}
 
-	setEvent(event){
-		for(var i = 0 ; i < this.events.length ; i++){
-			if(this.events[i].id == event.id){
-				event.copyTo(this.events[i]);
-				break;
-			}
-		}
-		
-	}
 	updateEvents(){
 		$(this.selector).fullCalendar("updateEvents",this.events);	
 	}
@@ -110,8 +128,7 @@ class AbstractEventBuilder{
 	}
 
 	instantiateEvent(){
-		var event = new AbstractEvent();
-		return event;
+		return new AbstractEvent(this.calendar);
 	}
 
 	fillEvent(event, id,title,start,end){
@@ -133,7 +150,7 @@ class EditableEventBuilder extends AbstractEventBuilder{
 	}
 
 	instantiateEvent(){
-		return new EditableEvent();
+		return new EditableEvent(this.calendar);
 	}
 
 	fillEvent(event, id, title, start, end){
@@ -144,60 +161,85 @@ class EditableEventBuilder extends AbstractEventBuilder{
 	}
 }
 
-function copyEvent(event){
-	var newEvent = new AbstractEvent();
-	for (var key in event) {
-		newEvent[key] = event[key];
-	}
-	return newEvent;
-}
-
 class AbstractEvent{
-	constructor(){
+	constructor(calendar){
+		this.calendar = calendar;
 		this.ressources = [];
+		this.dataKeys = ["color", "title", "start", "end"];
 	}
 	addRessource(ressourceId){
 		this.ressources.push(ressourceId);
 	}
-	setId(id){
-		this.id = id;
-	}
-	setTitle(title){
-		this.title = title;
-	}
-	setStart(start){
-		this.start = start;
-	}
-	setEnd(end){
-		this.end = end;
-	}
+	setId(id)			{ this.id = id;				}
+	setTitle(title)		{ this.title = title;		}
+	setStart(start)		{ this.start = start;		}
+	setEnd(end)			{ this.end = end;			}
+	setEditable()		{ this.editable = true;		}
+	setSelectable() 	{ this.selectable = true;	} //DOES THIS EVEN WORK, GOTTA CHECK THIS
 	setColor(color){
 		this.color = color;
 		if(this.initialColor == undefined){
 			this.initialColor = color;
 		}
 	}
-	isInitialColor() {return this.color == this.initialColor}
-	reinitializeColor() {this.color = this.initialColor;}
-	setEditable(){
-		this.editable = true;
+	
+	isInitialColor() {
+		return this.color == this.initialColor
 	}
-	setProperty(key, value){
-		this[key] = value;
+	reinitializeColor() {
+		this.color = this.initialColor;
 	}
+
 	copyTo(otherEvent){
-		for(var key in this){
+		for(var i = 0 ; i < this.dataKeys.length;i++){
+			var key = this.dataKeys[i];
 			otherEvent[key] = this[key];
 		}
 	}
-	onEventDragStart(calendar, event){}
-	onEventDragStop(calendar, event){}
-	onEventClick(calendar, event){}
+	copyFrom(otherEvent){
+		for(var i = 0 ; i < this.dataKeys.length;i++){
+			var key = this.dataKeys[i];
+			this[key] = otherEvent[key];
+		}
+	}
+
+	manageAction(actionCode, event){
+		this.copyFrom(event);
+		switch(actionCode){
+			case "dragStart":
+				this.onEventDragStart(event);
+				break;
+			case "dragStop":
+				this.onEventDragStop(event);
+				break;
+			case "click":
+				this.onEventClick(event);
+				break;	
+			default:
+		}
+	}
+
+	onEventDragStart(event){}
+	onEventDragStop(event){}
+	onEventDragFinished(event){}
+
+	//TODO
+	onEventResizeStart(event){}
+	onEventResizeStop(event){}
+	onEventResizeFinished(event){}
+
+	onEventClick(event){}
+
+	//TODO
+	onEventMouseOver(event){}
+	onEventMouseOut(event){}
 }
 
 class EditableEvent extends AbstractEvent{
-
-	onEventClick(calendar, event){
+	constructor(calendar){
+		super(calendar);
+	}
+	onEventClick(event){
 		if(this.isInitialColor()){
 			this.setColor("green");
 		}
@@ -206,12 +248,12 @@ class EditableEvent extends AbstractEvent{
 		}
 		
 		this.copyTo(event);
-		calendar.updateEvent(event);
+		this.calendar.updateEvent(event);
 	}
-	onEventDragStop(calendar, event){
+	onEventDragStop(event){
 		this.setColor("red");
 		this.copyTo(event);
-		calendar.updateEvent(event);
+		this.calendar.updateEvent(event);
 	}
 }
 

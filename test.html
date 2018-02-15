@@ -12,7 +12,9 @@
 
 		<script>
 			var calendar = new Calendar("#calendar");
-				var builder = new EditableEventBuilder(calendar);
+			var builder = new EditableEventBuilder(calendar);
+			var abstractBuilder = new AbstractEventBuilder(calendar);
+			
 			$(document).ready(function() {
 				
 				calendar.addView("month");
@@ -28,7 +30,7 @@
 
 				calendar.addEvent(builder.createEvent("3", "Rendez-vous", "2018-02-15 13:10", "2018-02-15 13:30"));
 
-				calendar.addEvent(builder.createEvent("2","Rendez-vous", "2018-02-15 13:00", "2018-02-15 14:00"));
+				calendar.addEvent(abstractBuilder.createEvent("2","Rendez-vous", "2018-02-15 13:00", "2018-02-15 14:00"));
 
 				calendar.print();
 
