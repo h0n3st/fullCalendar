@@ -26,35 +26,13 @@ class Calendar{
 	    	events:this.events,
 	    	eventClick: function(event, jsEvent, view){
 	    		calendar.getEvent(event.id).manageAction("click",event);
-
-	    		/*
-	    		var currEvent = calendar.getEvent(event.id);
-	    		currEvent.copyFrom(event);
-	    		currEvent.onEventClick(calendar, event);
-	    		*/
-	    		
 	    	},
 	    	eventDragStart: function(event, jsEvent, ui, view ) {
 	    		calendar.getEvent(event.id).manageAction("dragStart",event);
-
-	    		/*
-	    		var currEvent = calendar.getEvent(event.id);
-	    		currEvent.copyFrom(event);
-	    		currEvent.onEventDragStart(calendar, event);
-	    		*/
-
 	    	},
 	    	eventDragStop: function(event,jsEvent,ui,view) {
 	    		calendar.getEvent(event.id).manageAction("dragStop",event);
-
-	    		/*
-	    		var currEvent = calendar.getEvent(event.id);
-	    		currEvent.copyFrom(event);
-		    	currEvent.onEventDragStop(calendar, event);
-		    	*/
-		    	
 		    }
-	        // put your options and callbacks here
 	    });
 	    this.printed = true;
 		
