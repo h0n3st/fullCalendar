@@ -24,20 +24,20 @@ class Calendar{
 	    		end:"18:00"
 	    	},
 	    	events:this.events,
-	    	eventDragStart: function( event, jsEvent, ui, view ) {
-	    		event.onEventDragStart();
+	    	eventClick: function(event, jsEvent, view){
 	    		var currEvent = calendar.getEvent(event.id);
-	    		currEvent.onEventDragStart();
-	    		currEvent.copyTo(event);
-	    		calendar.updateEvents();
-	    		console.log(calendar.getEvent(4).color);
+	    		currEvent.onEventClick(calendar, event);
+	    		
+	    	},
+	    	eventDragStart: function(event, jsEvent, ui, view ) {
+	    		var currEvent = calendar.getEvent(event.id);
+	    		currEvent.onEventDragStart(calendar, event);
+
 	    	},
 	    	eventDragStop: function(event,jsEvent,ui,view) {
 	    		var currEvent = calendar.getEvent(event.id);
-		    	currEvent.onEventDragStop();
-		    	currEvent.copyTo(event);
-		    	calendar.updateEvents();
-		    	console.log(calendar.getEvent(4).color);
+		    	currEvent.onEventDragStop(calendar, event);
+		    	
 		    }
 	        // put your options and callbacks here
 	    });
@@ -94,6 +94,9 @@ class Calendar{
 	}
 	updateEvents(){
 		$(this.selector).fullCalendar("updateEvents",this.events);	
+	}
+	updateEvent(event){
+		$(this.selector).fullCalendar("updateEvent", event);
 	}
 }
 
@@ -157,52 +160,62 @@ class AbstractEvent{
 		this.ressources.push(ressourceId);
 	}
 	setId(id){
-		this.setProperty("id", id);
+		this.id = id;
 	}
 	setTitle(title){
-		this.setProperty("title", title);
+		this.title = title;
 	}
 	setStart(start){
-		this.setProperty("start", start);
+		this.start = start;
 	}
 	setEnd(end){
-		this.setProperty("end", end);
+		this.end = end;
 	}
 	setColor(color){
-		this.setProperty("color", color);
+		this.color = color;
+		if(this.initialColor == undefined){
+			this.initialColor = color;
+		}
 	}
+	isInitialColor() {return this.color == this.initialColor}
+	reinitializeColor() {this.color = this.initialColor;}
 	setEditable(){
-		this.setProperty("editable", true);
+		this.editable = true;
 	}
 	setProperty(key, value){
 		this[key] = value;
-	}
-	copy(){
-		return copyEvent(this);
 	}
 	copyTo(otherEvent){
 		for(var key in this){
 			otherEvent[key] = this[key];
 		}
 	}
-	onEventDragStart(){
-
-	}
-	onEventDragStop(){
-
-	}
+	onEventDragStart(calendar, event){}
+	onEventDragStop(calendar, event){}
+	onEventClick(calendar, event){}
 }
 
 class EditableEvent extends AbstractEvent{
 
-	onEventDragStart(){
-		this.setColor("red");
+	onEventClick(calendar, event){
+		if(this.isInitialColor()){
+			this.setColor("green");
+		}
+		else{
+			this.reinitializeColor();
+		}
+		
+		this.copyTo(event);
+		calendar.updateEvent(event);
 	}
-
-	onEventDragStop(){
-		this.setColor("blue");
+	onEventDragStop(calendar, event){
+		this.setColor("red");
+		this.copyTo(event);
+		calendar.updateEvent(event);
 	}
 }
+
+
 /*
 id	Optional. Useful for getEventSourceById.
 color	Sets every Event Object''s color for this source.

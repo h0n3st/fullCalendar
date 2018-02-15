@@ -32,9 +32,15 @@
 
 				calendar.print();
 
-				calendar.addEvent(builder.createEvent("4","DOES IT SHOW", "2018-02-15 12:00", "2018-02-15 14:00"));
- 
+				var event = builder.createEvent("4","DOES IT SHOW", "2018-02-15 12:00", "2018-02-15 14:00");
+				calendar.addEvent(event);
+ 		
 				calendar.print(); 
+
+				event.setColor("green");
+				calendar.setEvent(event);
+				calendar.updateEvents();
+
 			    // page is now ready, initialize the calendar...
 
 
