@@ -6,11 +6,13 @@ class Calendar{
 		this.events = [];
 		this.views = [];
 		this.defaultView = null;
+		this.builder = null;
 		this.printed = false;
 	}
 	print(){
 		var selector = this.selector;
 		var calendar = this;
+		var builder = this.builder;
 		$(selector).fullCalendar({
 	    	header:{
 	    		left: "prev,next today",
@@ -18,24 +20,59 @@ class Calendar{
 	    		right:this.getViewsList()
 	    	},
 	    	defaultView:this.getDefaultView(),
-	    	businessHours:{
-	    		dow:[1,2,3,4,5],
-	    		start:"10:00",
-	    		end:"18:00"
-	    	},
+	    	businessHours:this.getBusinessHours(),
+	    	editable:true,
+	    	selectable:true,
 	    	events:this.events,
+	    	select: function(start, end){
+
+	    		var eventsWithin = calendar.getEventsWithin(start, end);
+	    		
+	    		if(eventsWithin.length == 0){
+	    			//if no other events are within the start and end
+		    		if(builder != null){
+		    			var event = builder.createEvent(calendar.getHighestId() + 1, "test", start, end);
+		    			calendar.addEvent(event);
+		    		}
+	    		}
+	    		else{
+	    			calendar.unselectEvents();
+	    			for(var i = 0 ; i < eventsWithin.length; i++){
+	    				var event = eventsWithin[i];
+	    				event.select();
+	    				calendar.reprintEvent(event.id, event);
+	    			}
+	    		}
+	    		
+	    	},
 	    	eventClick: function(event, jsEvent, view){
-	    		calendar.getEvent(event.id).manageAction("click",event);
+	    		var data = {event:event, jsEvent:jsEvent, view:view};
+	    		calendar.getEvent(event.id).manageAction("click",event, data);
 	    	},
-	    	eventDragStart: function(event, jsEvent, ui, view ) {
-	    		calendar.getEvent(event.id).manageAction("dragStart",event);
+	    	eventDrop: function( event, delta, revertFunc, jsEvent, ui, view ) {
+	    		var data = {event:event, delta:delta, revertFunc:revertFunc, jsEvent:jsEvent, ui:ui, view:view};
+	    		calendar.getEvent(event.id).manageAction("drag",event,data);
 	    	},
-	    	eventDragStop: function(event,jsEvent,ui,view) {
-	    		calendar.getEvent(event.id).manageAction("dragStop",event);
-		    }
+	    	eventResize: function( event, delta, revertFunc, jsEvent, ui, view ) {
+	    		var data = {event:event, delta:delta, revertFunc:revertFunc, jsEvent:jsEvent, ui:ui, view:view};
+	    		calendar.getEvent(event.id).manageAction("resize", event, data);
+	    	}
+
 	    });
 	    this.printed = true;
 		
+	}
+
+	setBusinessHours(daysIndex, start, end){
+		this.businessHours = {
+			dow:daysIndex,
+			start:start,
+			end:end
+		}
+	}
+
+	getBusinessHours(){
+		return this.businessHours;
 	}
 
 	addView(view){
@@ -57,8 +94,49 @@ class Calendar{
 		return this.views.join(",");
 	}
 
+	canCreateEvents(builder){
+		this.builder = builder;
+	}
+
+	getHighestId(){
+		var highestId = 0;
+		for(var i = 0 ; i < this.events.length; i++){
+			if(this.events[i].id > highestId){
+				highestId = this.events[i].id;
+			}
+		}
+		return highestId;
+	}
+
+	getEventsWithin(start, end){
+		var eventsWithin = [];
+
+		start = new Date(start);
+		start = start.getTime();
+
+		end = new Date(end);
+		end = end.getTime();
+
+		for(var i = 0 ; i < this.events.length; i++){
+			var currEvent = this.events[i];
+			var eventStart = new Date(currEvent.start);
+			eventStart = eventStart.getTime();
+
+			var eventEnd = new Date(currEvent.end);
+			eventEnd = eventEnd.getTime();
+
+			console.log(start, end, eventStart, eventEnd);
+
+			if((eventStart >= start && eventStart <= end)
+				|| (eventEnd >= start && eventEnd <= end)){
+				eventsWithin.push(currEvent);
+			}
+		}
+		return eventsWithin;
+	}
+
 	getEvent(id){ 	
-		event = null;
+		var event = null;
 		for(var i = 0 ; i < this.events.length; i++){
 			if(this.events[i].id == id){
 				event = this.events[i];
@@ -67,11 +145,33 @@ class Calendar{
 		}
 		return event;
 	}
-	
-	setEvent(event){
-		for(var i = 0 ; i < this.events.length ; i++){
-			if(this.events[i].id == event.id){
-				event.copyTo(this.events[i]);
+
+	getSelectedEvents(){
+		var events = [];
+		for(var i = 0 ; i < this.events.length; i++){
+			if(this.events[i].isSelected()){
+				events.push(this.events[i]);
+			}
+		}
+		return this.events;
+	}
+
+	unselectEvents(){
+		var events = this.getSelectedEvents();
+		for(var i = 0 ; i < events.length; i++){
+			if(events[i].isSelected()){
+				events[i].unselect();
+				this.reprintEvent(events[i].id, events[i]);
+			}
+		}
+
+
+	}
+
+	setEvent(id, event){
+		for(var i = 0 ; i < this.events.length; i++){
+			if(this.events[i].id == id){
+				this.events[i] = event;
 				break;
 			}
 		}
@@ -88,15 +188,37 @@ class Calendar{
 		}
 	}
 
-	updateEvents(){
-		$(this.selector).fullCalendar("updateEvents",this.events);	
+	removeEvent(id){
+		var newEvents = [];
+		for(var i = 0 ; i < this.events ; i++){
+
+			if(this.events[i].id != id){
+				newEvents.push(this.events[i]);
+			}
+		}
+		this.events = newEvents;
+
+		$(this.selector).fullCalendar("removeEvents", id);
 	}
-	updateEvent(event){
-		$(this.selector).fullCalendar("updateEvent", event);
+
+	reprint(){
+		$(this.selector).fullCalendar("removeEvents");
+		$(this.selector).fullCalendar("renderEvents", this.events);
 	}
+
+	reprintEvent(id){
+		this.reprintEvent(id, this.getEvent(id));
+	}
+
+	reprintEvent(id, event){
+		this.setEvent(id, event);
+		$(this.selector).fullCalendar("removeEvents", id);
+		$(this.selector).fullCalendar("renderEvent", event);
+	}
+
 }
 
-class AbstractEventBuilder{
+class BaseEventBuilder{
 	constructor(calendar){
 		this.calendar = calendar;
 	}
@@ -106,7 +228,7 @@ class AbstractEventBuilder{
 	}
 
 	instantiateEvent(){
-		return new AbstractEvent(this.calendar);
+		return new BaseEvent(this.calendar);
 	}
 
 	fillEvent(event, id,title,start,end){
@@ -118,7 +240,7 @@ class AbstractEventBuilder{
 	}
 }
 
-class EditableEventBuilder extends AbstractEventBuilder{
+class EditableEventBuilder extends BaseEventBuilder{
 	constructor(calendar){
 		super(calendar);
 		this.calendar = calendar;
@@ -143,7 +265,6 @@ class AbstractEvent{
 	constructor(calendar){
 		this.calendar = calendar;
 		this.ressources = [];
-		this.dataKeys = ["color", "title", "start", "end"];
 	}
 	addRessource(ressourceId){
 		this.ressources.push(ressourceId);
@@ -160,7 +281,7 @@ class AbstractEvent{
 			this.initialColor = color;
 		}
 	}
-	
+
 	isInitialColor() {
 		return this.color == this.initialColor
 	}
@@ -169,89 +290,103 @@ class AbstractEvent{
 	}
 
 	copyTo(otherEvent){
-		for(var i = 0 ; i < this.dataKeys.length;i++){
-			var key = this.dataKeys[i];
+
+		for(var key in this){
 			otherEvent[key] = this[key];
 		}
 	}
 	copyFrom(otherEvent){
-		for(var i = 0 ; i < this.dataKeys.length;i++){
-			var key = this.dataKeys[i];
+		for(var key in otherEvent){
 			this[key] = otherEvent[key];
 		}
 	}
 
+}
+class ActionnableEvent extends AbstractEvent{
+	constructor(calendar){super(calendar);}
+
 	manageAction(actionCode, event){
-		this.copyFrom(event);
-		switch(actionCode){
-			case "dragStart":
-				this.onEventDragStart(event);
-				break;
-			case "dragStop":
-				this.onEventDragStop(event);
-				break;
-			case "click":
-				this.onEventClick(event);
-				break;	
-			default:
-		}
+		this.manageAction(actionCode, event, {});
 	}
 
-	onEventDragStart(event){}
-	onEventDragStop(event){}
-	onEventDragFinished(event){}
+	manageAction(actionCode, event, data){
 
-	//TODO
-	onEventResizeStart(event){}
-	onEventResizeStop(event){}
-	onEventResizeFinished(event){}
+		this.copyFrom(event);
 
-	onEventClick(event){}
+		switch(actionCode){
+			case "drag":
+				this.onEventDrag(event, data);
+				break;
+			case "click":
+				this.onEventClick(event, data);
+				break;	
+			case "resize":
+				this.onEventResize(event, data);
+				break;
 
-	//TODO
-	onEventMouseOver(event){}
-	onEventMouseOut(event){}
+			default:
+		}
+
+		this.calendar.reprintEvent(this.id, this);
+	}
+
+	onEventDrag(event, data){}
+
+	onEventResize(event, data){}
+
+	onEventClick(event, data){}
 }
 
-class EditableEvent extends AbstractEvent{
+class selectableEvent extends ActionnableEvent{
+	constructor(calendar) {super(calendar); this.selected = false;}
+
+	select(){this.selected = true;}
+	unselect(){this.selected = false;}
+
+	isSelected() {return this.selected;}
+}
+
+class BaseEvent extends selectableEvent{
+	constructor(calendar) {super(calendar)}
+}
+
+class EditableEvent extends BaseEvent{
 	constructor(calendar){
 		super(calendar);
 	}
-	onEventClick(event){
-		if(this.isInitialColor()){
-			this.setColor("green");
+	onEventClick(event, data){
+
+		//Unselect other events
+		var selectedEvents = this.calendar.getSelectedEvents();
+		for(var i = 0 ; i < selectedEvents.length; i++){
+			if(selectedEvents[i].id != this.id && selectedEvents[i].isSelected()){
+				selectedEvents[i].unselect();
+				this.calendar.reprintEvent(selectedEvents[i].id, selectedEvents[i]);
+			}
+		}
+
+		if(!this.isSelected()){
+			this.calendar.unselectEvents();
+			this.select();
 		}
 		else{
-			this.reinitializeColor();
+			this.unselect();
 		}
-		
-		this.copyTo(event);
-		this.calendar.updateEvent(event);
 	}
-	onEventDragStop(event){
+	onEventDrag(event, data){
 		this.setColor("red");
-		this.copyTo(event);
-		this.calendar.updateEvent(event);
+	}
+	onEventResize(event, data){
+		this.setColor("yellow");
+	}
+
+	select(){
+		super.select();
+		this.setColor("green");
+	}
+
+	unselect(){
+		super.unselect();
+		this.reinitializeColor();
 	}
 }
-
-
-/*
-id	Optional. Useful for getEventSourceById.
-color	Sets every Event Object''s color for this source.
-backgroundColor	Sets every Event Object''s backgroundColor for this source.
-borderColor	Sets every Event Object''s borderColor for this source.
-textColor	Sets every Event Object''s textColor for this source.
-className	Sets every Event Object''s className for this source.
-editable	Sets every Event Object''s editable for this source.
-startEditable	Sets every Event Object''s startEditable for this source.
-durationEditable	Sets every Event Object''s durationEditable for this source.
-resourceEditable	Sets every Event Object''s resourceEditable for this source.
-rendering	Sets every Event Object''s rendering for this source.
-overlap	Sets every Event Object''s overlap for this source.
-constraint	Sets every Event Object''s constraint for this source.
-allDayDefault	Sets the allDayDefault option, but only for this source.
-eventDataTransform	Sets the eventDataTransform callback, but only for this source.
-
-*/
-

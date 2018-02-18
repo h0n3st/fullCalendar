@@ -13,8 +13,10 @@
 		<script>
 			var calendar = new Calendar("#calendar");
 			var builder = new EditableEventBuilder(calendar);
-			var abstractBuilder = new AbstractEventBuilder(calendar);
+			var abstractBuilder = new BaseEventBuilder(calendar);
 			
+			calendar.canCreateEvents(builder);
+
 			$(document).ready(function() {
 				
 				calendar.addView("month");
@@ -23,28 +25,20 @@
 
 				calendar.setDefaultView("agendaWeek");
 
-				/*
-				calendar.addRessource(createRessource("radio", "Radiographie"));
-				calendar.addRessource(createRessource("dermo", "Dermatologie"));
-				*/
+				calendar.setBusinessHours([1,2,3,4,5], "9:00", "17:00");
 
-				calendar.addEvent(builder.createEvent("3", "Rendez-vous", "2018-02-15 13:10", "2018-02-15 13:30"));
+				calendar.addEvent(builder.createEvent("3", "Rendez-vous", "2018-02-19 13:10", "2018-02-15 13:30"));
 
-				calendar.addEvent(abstractBuilder.createEvent("2","Rendez-vous", "2018-02-15 13:00", "2018-02-15 14:00"));
+				calendar.addEvent(abstractBuilder.createEvent("2","Rendez-vous", "2018-02-19 13:00", "2018-02-15 14:00"));
 
 				calendar.print();
 
-				var event = builder.createEvent("4","DOES IT SHOW", "2018-02-15 12:00", "2018-02-15 14:00");
+				var event = builder.createEvent("4","DOES IT SHOW", "2018-02-19 12:00", "2018-02-15 14:00");
 				calendar.addEvent(event);
  		
 				calendar.print(); 
 
-				event.setColor("green");
-				calendar.setEvent(event);
-				calendar.updateEvents();
-
-			    // page is now ready, initialize the calendar...
-
+				calendar.reprint();
 
 			});
 		</script>
