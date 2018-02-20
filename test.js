@@ -1,6 +1,6 @@
 
-class Calendar{
-	constructor(selector){
+class Calendar {
+	constructor(selector) {
 		this.selector = selector;
 		this.events = [];
 		this.views = [];
@@ -8,194 +8,141 @@ class Calendar{
 		this.builder = null;
 		this.printed = false;
 	}
-	print(jsonData){
-
-		if(!this.printed){
-            var selector = this.selector;
-            var calendar = this;
-            var builder = this.builder;
-
-            jsonData.editable = true;
-            jsonData.selectable = true;
-            jsonData.events = this.events;
-
-            jsonData.viewRender = function() {calendar.reprint();}
-
-            jsonData.select = function(start, end){
-
-                var eventsWithin = calendar.getEventsWithin(start, end);
-
-                if(eventsWithin.length == 0){
-                    //if no other events are within the start and end
-                    if(builder != null){
-                        var event = builder.createEvent(calendar.getHighestId() + 1, "test", start, end);
-                        calendar.addEvent(event);
-                    }
-                }
-                else{
-                    calendar.unselectEvents();
-                    for(var i = 0 ; i < eventsWithin.length; i++){
-                        var event = eventsWithin[i];
-                        event.select();
-                    }
-                }
-                calendar.rerenderEvents();
-            };
-
-            jsonData.eventClick = function(event, jsEvent, view){
-                var data = {event:event, jsEvent:jsEvent, view:view};
-                calendar.getEvent(event.id).manageAction("click",event, data);
-                calendar.rerenderEvents();
-            };
-
-            jsonData.eventDrop = function( event, delta, revertFunc, jsEvent, ui, view ){
-                var data = {event:event, delta:delta, revertFunc:revertFunc, jsEvent:jsEvent, ui:ui, view:view};
-                calendar.getEvent(event.id).manageAction("drag",event, data);
-                calendar.rerenderEvents();
-            };
-
-            jsonData.eventResize = function( event, delta, revertFunc, jsEvent, ui, view ) {
-                var data = {event:event, delta:delta, revertFunc:revertFunc, jsEvent:jsEvent, ui:ui, view:view};
-                calendar.getEvent(event.id).manageAction("resize",event,data);
-                calendar.rerenderEvents();
-            };
-
-            $(selector).fullCalendar(jsonData);
-            this.printed = true;
-		}
-		else{
+	print(jsonData) {
+		if (this.printed) {
 			this.reprint();
+			return;
 		}
+
+        jsonData.editable = true;
+        jsonData.selectable = true;
+        jsonData.events = this.events;
+
+        jsonData.viewRender = () => {
+        	this.reprint();
+        };
+
+        jsonData.select = (start, end) => {
+
+            const eventsWithin = this.getEventsWithin(start, end);
+
+            if(eventsWithin.length === 0 && builder) {
+                //if no other events are within the start and end
+                const newEvent = this.builder.createEvent(this.getHighestId() + 1, 'test', start, end);
+                this.addEvent(newEvent);
+            } 
+            else {
+                this.unselectEvents();
+                eventsWithin.forEach((event) => event.select());
+            }
+            this.rerenderEvents();
+        };
+
+        jsonData.eventClick = (event) => {
+            this.getEvent(event.id).manageAction('click', event);
+            this.rerenderEvents();
+        };
+
+        jsonData.eventDrop = (event) => {
+            this.getEvent(event.id).manageAction('drag', event);
+            this.rerenderEvents();
+        };
+
+        jsonData.eventResize = (event) => {
+            this.getEvent(event.id).manageAction('resize', event);
+            this.rerenderEvents();
+        };
+
+        $(this.selector).fullCalendar(jsonData);
+        this.printed = true;
+
 	}
 
-	canCreateEvents(builder){
+
+
+	canCreateEvents(builder) {
 		this.builder = builder;
 	}
 
-	getHighestId(){
-		var highestId = 0;
-		for(var i = 0 ; i < this.events.length; i++){
-			if(this.events[i].id > highestId){
-				highestId = this.events[i].id;
-			}
-		}
-		return highestId;
+	getHighestId() {
+		return this.events.map((event) => {
+			return event.id;
+		}).reduce((max, currValue) => {
+			return (currValue > max) ? currValue : max;
+		});
 	}
 
-	getEventsWithin(start, end){
-		var eventsWithin = [];
+	getEventsWithin(start, end) {
+		const startTime = (new Date(start)).getTime();
+		const endTime = (new Date(end)).getTime();
 
-		start = new Date(start);
-		start = start.getTime();
-
-		end = new Date(end);
-		end = end.getTime();
-
-		for(var i = 0 ; i < this.events.length; i++){
-			var currEvent = this.events[i];
-			var eventStart = new Date(currEvent.start);
-			eventStart = eventStart.getTime();
-
-			var eventEnd = new Date(currEvent.end);
-			eventEnd = eventEnd.getTime();
-
-			if((eventStart >= start && eventStart <= end)
-				|| (eventEnd >= start && eventEnd <= end)){
-				eventsWithin.push(currEvent);
-			}
-		}
-		return eventsWithin;
+		return this.events.map((event) => {
+			return {
+				event: event,
+				start: (new Date(event.start)).getTime(),
+				end: (new Date(event.end)).getTime()
+			};
+		}).filter((value) => {
+			return (value.start >= startTime && value.start <= endTime) || 
+					(value.end >= startTime && value.end <= endTime);
+		}).map((value) => value.event);
 	}
 
-	getEvent(id){ 	
-		var event = null;
-		for(var i = 0 ; i < this.events.length; i++){
-			if(this.events[i].id == id){
-				event = this.events[i];
-				break;
-			}
-		}
-		return event;
+	getEvent(id) { 	
+		return this.events.find((event) => event.id == id);
 	}
 
-	getSelectedEvents(){
-		var events = [];
-		for(var i = 0 ; i < this.events.length; i++){
-			if(this.events[i].isSelected()){
-				events.push(this.events[i]);
-			}
-		}
-		return this.events;
+	getSelectedEvents() {
+		return this.events.filter((event) => event.isSelected());
 	}
 
-	unselectEvents(){
-		var events = this.getSelectedEvents();
-		for(var i = 0 ; i < events.length; i++){
-			if(events[i].isSelected()){
-				events[i].unselect();
-			}
-		}
+	unselectEvents() {
+		this.events.forEach((event) => (event.isSelected()) ? event.unselect() : null);
 	}
 
-	addEvent(event){
+	addEvent(event) {
 		this.events.push(event);
 	}
 
-	removeEvent(id){
-		var newEvents = [];
-		for(var i = 0 ; i < this.events ; i++){
-
-			if(this.events[i].id != id){
-				newEvents.push(this.events[i]);
-			}
-		}
-		this.events = newEvents;
-
-		$(this.selector).fullCalendar("removeEvents", id);
+	removeEvent(id) {
+		this.events = this.events.filter((event) => events.id == id);
+		$(this.selector).fullCalendar('removeEvents', id);
 	}
 
-	rerenderEvents(){
-		var eventsToRender = [];
-		for(var i = 0 ; i < this.events.length; i++){
-			if(this.events[i].toRender()){
-				eventsToRender.push(this.events[i]);
-			}
-		}
+	rerenderEvents() {
 
-		for(var i = 0 ; i < eventsToRender.length; i++){
-			$(this.selector).fullCalendar("removeEvents", eventsToRender[i].id);
-		}
-        $(this.selector).fullCalendar("renderEvents", eventsToRender);
+		const eventsToRender = this.events.filter((event) => event.needsRendering());
 
-		for(var i = 0 ; i < eventsToRender.length; i++){
-			eventsToRender[i].setRendered();
-		}
+		eventsToRender.forEach((event) => $(this.selector).fullCalendar('removeEvents', event.id))
+
+        $(this.selector).fullCalendar('renderEvents', eventsToRender);
+
+        eventsToRender.forEach((event) => event.setMustBeRendered(false));
 	}
 
 	//Fully reprint events, shouldn't be used
-	reprint(){
-		for(var i = 0 ; i < this.events.length; i++){
-			this.events[i].setModified();
-		}
+	reprint() {
+		this.events.forEach((event) => event.setMustBeRendered(true));
 		this.rerenderEvents();
 	}
 }
 
-class BaseEventBuilder{
-	constructor(calendar){
+class BaseEventBuilder {
+	constructor(calendar) {
 		this.calendar = calendar;
 	}
-	createEvent(id,title,start,end){
-		var event = this.instantiateEvent();
+
+	createEvent(id, title, start, end) {
+		const event = this.instantiateEvent();
         this.fillEvent(event, id, title, start, end);
 		return event;
 	}
 
-	instantiateEvent(){
+	instantiateEvent() {
 		return new BaseEvent(this.calendar);
 	}
 
-	fillEvent(event,id,title,start,end){
+	fillEvent(event, id, title, start, end) {
 		event.setId(id);
 		event.setTitle(title);
 		event.setStart(start);
@@ -205,181 +152,175 @@ class BaseEventBuilder{
 
 class EditableEventBuilder extends BaseEventBuilder{
 
-	instantiateEvent(){
+	instantiateEvent() {
 		return new EditableEvent(this.calendar);
 	}
 
-	fillEvent(event, id, title, start, end){
+	fillEvent(event, id, title, start, end) {
 		super.fillEvent(event,id,title,start,end);
-		event.setColor("blue");
+		event.setColor('blue');
 		event.setEditable();
 	}
 }
 
 class AbstractEvent{
-	constructor(calendar){
+	constructor(calendar) {
 		this.calendar = calendar;
-		this.ressources = [];
 		this.editable = false;
+		this.initialColor = null;
 	}
-	addRessource(ressourceId){
-		this.ressources.push(ressourceId);
+
+	setId(id) { 
+		this.setProperty('id', id);
 	}
-	setId(id)			{ this.setProperty("id", id);			}
-	setTitle(title)		{ this.setProperty("title", title);		}
-	setStart(start)		{ this.setProperty("start", start);		}
-	setEnd(end)			{ this.setProperty("end", end);			}
-	setEditable()		{ this.setProperty("editable", true);	}
-	setColor(color){
-		this.setProperty("color", color);
-		if(this.initialColor == undefined){
-			this.setProperty("initialColor", color);
+	setTitle(title)	{
+		this.setProperty('title', title);		
+	}
+	setStart(start)	{
+		this.setProperty('start', start);		
+	}
+	setEnd(end)	{
+		this.setProperty('end', end);			
+	}
+	setEditable() {
+		this.setProperty('editable', true);	
+	}
+	setColor(color) {
+		this.setProperty('color', color);
+		if (!this.initialColor) {
+			this.setProperty('initialColor', color);
 		}
 	}
-	setProperty(key, value){
+	setProperty(key, value) {
 		this[key] = value;
 	}
 	isInitialColor() {
 		return this.color == this.initialColor;
 	}
 	reinitializeColor() {
-		this.color = this.initialColor;
+		this.setProperty('color', this.initialColor);
 	}
-	pullDataFrom(jsonEvent){
-		for(var key in jsonEvent){
+	pullDataFrom(jsonEvent) {
+		for(const key in jsonEvent) {
 			this[key] = jsonEvent[key];
 		}
 	}
 }
 
 class RenderableEvent extends AbstractEvent{
-	constructor(calendar){
+	constructor(calendar) {
 		super(calendar);
-		this.modified = true;
+		this.modified = false;
 	}
-	setProperty(key,value){
-		if(this[key] != value){
-			this.setModified();
+	setProperty(key,value) {
+		if(this[key] != value) {
+			this.setMustBeRendered(true);
 		}
 		super.setProperty(key,value);
 	}
-	setModified(){
-		this.modified = true;
+	setMustBeRendered(mustRender) {
+		this.modified = mustRender;
 	}
-	toRender(){
+	needsRendering() {
 		return this.modified;
-	}
-	setRendered(){
-		this.modified = false;
 	}
 }
 
 class ActionnableEvent extends RenderableEvent{
-
-	manageAction(actionCode, event){
+	constructor(calendar){
+		super(calendar);
+		this.actionFunctions = {
+			drag: () => { 
+				this.onEventDrag(); 
+			},
+			click: () => { 
+				this.onEventClick(); 
+			},
+			resize: () =>  { 
+				this.onEventResize(); 
+			}
+		};
+	}
+	
+	manageAction(actionCode, event) {
 		this.manageAction(actionCode, event, {});
 	}
 
-	manageAction(actionCode, event, data){
-
+	manageAction(actionCode, event) {
 		this.pullDataFrom(event);
-
-		switch(actionCode){
-			case "drag":
-				this.onEventDrag(event, data);
-				break;
-			case "click":
-				this.onEventClick(event, data);
-				break;	
-			case "resize":
-				this.onEventResize(event, data);
-				break;
-		}
+		this.actionFunctions[actionCode]();
 	}
 
-	onEventDrag(event, data){}
-	onEventResize(event, data){}
-	onEventClick(event, data){}
+	onEventDrag() {}
+	onEventResize() {}
+	onEventClick() {}
 }
 
 class selectableEvent extends ActionnableEvent{
 	constructor(calendar) {super(calendar); this.selected = false;}
 
-	select(){this.setProperty("selected", true);}
-	unselect(){this.setProperty("selected", false);}
+	select() {this.setProperty('selected', true);}
+	unselect() {this.setProperty('selected', false);}
 
 	isSelected() {return this.selected;}
 }
 
 class revertableEvent extends selectableEvent{
-	manageAction(actionCode, event, data){
+	manageAction(actionCode, event) {
 		this.saveData();
-		super.manageAction(actionCode,event,data);
+		super.manageAction(actionCode,event);
 		this.clearSavedData();
 	}
 
-	saveData(){
-		var initialData = {};
-		for(var key in this){
+	saveData() {
+		const initialData = {};
+		for(const key in this) {
 			initialData[key] = this[key];
 		}
 
 		this.initialData = initialData;
 	}
 
-	clearSavedData(){
+	clearSavedData() {
 		this.initialData = undefined;
 	}
-	revert(){
+	revert() {
 		this.pullDataFrom(this.initialData);
-		this.setModified();
+		this.setMustBeRendered(true);
 	}
 }
 
 class BaseEvent extends revertableEvent{
-	constructor(calendar) {super(calendar)}
 }
 
 class EditableEvent extends BaseEvent{
-	constructor(calendar){
-		super(calendar);
-	}
-	onEventClick(event, data){
 
-		//Unselect other events
-		var selectedEvents = this.calendar.getSelectedEvents();
-		for(var i = 0 ; i < selectedEvents.length; i++){
-			if(selectedEvents[i].id != this.id && selectedEvents[i].isSelected()){
-				selectedEvents[i].unselect();
-			}
-		}
+	onEventClick() {
+		const initiallySelected = this.isSelected();
+		
+		this.calendar.unselectEvents();
 
-		if(!this.isSelected()){
-			this.calendar.unselectEvents();
+		if(!initiallySelected){
 			this.select();
 		}
-		else{
-			this.unselect();
-		}
 	}
-	onEventDrag(event, data){
-		if(!this.isSelected()){
+	onEventDrag() {
+		if(!this.isSelected()) {
 			this.revert();
-			this.setColor("red");
+			this.setColor('red');
 		}
-		
 	}
-	onEventResize(event, data){
-		if(!this.isSelected()){
+	onEventResize() {
+		if(!this.isSelected()) {
 			this.revert();
-			this.setColor("red");
+			this.setColor('red');
 		}
 	}
-	select(){
+	select() {
 		super.select();
-		this.setColor("green");
+		this.setColor('green');
 	}
-	unselect(){
+	unselect() {
 		super.unselect();
 		this.reinitializeColor();
 	}
