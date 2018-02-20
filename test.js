@@ -18,6 +18,9 @@ class Calendar{
             jsonData.editable = true;
             jsonData.selectable = true;
             jsonData.events = this.events;
+
+            jsonData.viewRender = function() {calendar.reprint();}
+
             jsonData.select = function(start, end){
 
                 var eventsWithin = calendar.getEventsWithin(start, end);
@@ -45,8 +48,8 @@ class Calendar{
                 calendar.rerenderEvents();
             };
 
-            jsonData.eventDrop = function(event, jsEvent, view){
-                var data = {event:event, jsEvent:jsEvent, view:view};
+            jsonData.eventDrop = function( event, delta, revertFunc, jsEvent, ui, view ){
+                var data = {event:event, delta:delta, revertFunc:revertFunc, jsEvent:jsEvent, ui:ui, view:view};
                 calendar.getEvent(event.id).manageAction("drag",event, data);
                 calendar.rerenderEvents();
             };
@@ -61,7 +64,7 @@ class Calendar{
             this.printed = true;
 		}
 		else{
-			this.rerenderEvents();
+			this.reprint();
 		}
 	}
 
@@ -171,8 +174,10 @@ class Calendar{
 
 	//Fully reprint events, shouldn't be used
 	reprint(){
-		$(this.selector).fullCalendar("removeEvents");
-		$(this.selector).fullCalendar("renderEvents", this.events);
+		for(var i = 0 ; i < this.events.length; i++){
+			this.events[i].setModified();
+		}
+		this.rerenderEvents();
 	}
 }
 
@@ -190,7 +195,7 @@ class BaseEventBuilder{
 		return new BaseEvent(this.calendar);
 	}
 
-	fillEvent(event, id,title,start,end){
+	fillEvent(event,id,title,start,end){
 		event.setId(id);
 		event.setTitle(title);
 		event.setStart(start);
@@ -207,6 +212,7 @@ class EditableEventBuilder extends BaseEventBuilder{
 	fillEvent(event, id, title, start, end){
 		super.fillEvent(event,id,title,start,end);
 		event.setColor("blue");
+		event.setEditable();
 	}
 }
 
@@ -214,6 +220,7 @@ class AbstractEvent{
 	constructor(calendar){
 		this.calendar = calendar;
 		this.ressources = [];
+		this.editable = false;
 	}
 	addRessource(ressourceId){
 		this.ressources.push(ressourceId);
@@ -223,7 +230,6 @@ class AbstractEvent{
 	setStart(start)		{ this.setProperty("start", start);		}
 	setEnd(end)			{ this.setProperty("end", end);			}
 	setEditable()		{ this.setProperty("editable", true);	}
-	setSelectable() 	{ this.setProperty("selectable",true);	} //DOES THIS EVEN WORK, GOTTA CHECK THIS
 	setColor(color){
 		this.setProperty("color", color);
 		if(this.initialColor == undefined){
@@ -257,11 +263,9 @@ class RenderableEvent extends AbstractEvent{
 		}
 		super.setProperty(key,value);
 	}
-
 	setModified(){
 		this.modified = true;
 	}
-
 	toRender(){
 		return this.modified;
 	}
@@ -307,7 +311,32 @@ class selectableEvent extends ActionnableEvent{
 	isSelected() {return this.selected;}
 }
 
-class BaseEvent extends selectableEvent{
+class revertableEvent extends selectableEvent{
+	manageAction(actionCode, event, data){
+		this.saveData();
+		super.manageAction(actionCode,event,data);
+		this.clearSavedData();
+	}
+
+	saveData(){
+		var initialData = {};
+		for(var key in this){
+			initialData[key] = this[key];
+		}
+
+		this.initialData = initialData;
+	}
+
+	clearSavedData(){
+		this.initialData = undefined;
+	}
+	revert(){
+		this.pullDataFrom(this.initialData);
+		this.setModified();
+	}
+}
+
+class BaseEvent extends revertableEvent{
 	constructor(calendar) {super(calendar)}
 }
 
@@ -334,10 +363,17 @@ class EditableEvent extends BaseEvent{
 		}
 	}
 	onEventDrag(event, data){
-		this.setColor("red");
+		if(!this.isSelected()){
+			this.revert();
+			this.setColor("red");
+		}
+		
 	}
 	onEventResize(event, data){
-		this.setColor("yellow");
+		if(!this.isSelected()){
+			this.revert();
+			this.setColor("red");
+		}
 	}
 	select(){
 		super.select();
