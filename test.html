@@ -18,20 +18,27 @@
 			calendar.canCreateEvents(builder);
 
 			$(document).ready(function() {
-				
-				calendar.addView("month");
-				calendar.addView("agendaWeek");
-				calendar.addView("agendaDay");
-
-				calendar.setDefaultView("agendaWeek");
-
-				calendar.setBusinessHours([1,2,3,4,5], "9:00", "17:00");
 
 				calendar.addEvent(builder.createEvent("3", "Rendez-vous", "2018-02-19 13:10", "2018-02-15 13:30"));
-
 				calendar.addEvent(abstractBuilder.createEvent("2","Rendez-vous", "2018-02-19 13:00", "2018-02-15 14:00"));
 
-				calendar.print();
+				var jsonData = {
+                    header:{
+                        left: "prev,next today",
+                        center:"title",
+                        right:"month,agendaWeek,agendaDay"
+                    },
+                    allDaySlot:false,
+                    minTime:"9:00",
+                    maxTime:"17:00",
+                    defaultView:"agendaWeek",
+                    businessHours:{
+                        dow:[1,2,3,4,5],
+                        start:"9:00",
+                        end:"17:00"
+                    }
+                };
+				calendar.print(jsonData);
 
 				var event = builder.createEvent("4","DOES IT SHOW", "2018-02-19 12:00", "2018-02-15 14:00");
 				calendar.addEvent(event);

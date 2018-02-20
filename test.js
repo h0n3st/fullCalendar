@@ -2,96 +2,67 @@
 class Calendar{
 	constructor(selector){
 		this.selector = selector;
-
 		this.events = [];
 		this.views = [];
 		this.defaultView = null;
 		this.builder = null;
 		this.printed = false;
 	}
-	print(){
-		var selector = this.selector;
-		var calendar = this;
-		var builder = this.builder;
-		$(selector).fullCalendar({
-	    	header:{
-	    		left: "prev,next today",
-	    		center:"title",
-	    		right:this.getViewsList()
-	    	},
-	    	defaultView:this.getDefaultView(),
-	    	businessHours:this.getBusinessHours(),
-	    	editable:true,
-	    	selectable:true,
-	    	events:this.events,
-	    	select: function(start, end){
+	print(jsonData){
 
-	    		var eventsWithin = calendar.getEventsWithin(start, end);
-	    		
-	    		if(eventsWithin.length == 0){
-	    			//if no other events are within the start and end
-		    		if(builder != null){
-		    			var event = builder.createEvent(calendar.getHighestId() + 1, "test", start, end);
-		    			calendar.addEvent(event);
-		    		}
-	    		}
-	    		else{
-	    			calendar.unselectEvents();
-	    			for(var i = 0 ; i < eventsWithin.length; i++){
-	    				var event = eventsWithin[i];
-	    				event.select();
-	    				calendar.reprintEvent(event.id, event);
-	    			}
-	    		}
-	    		
-	    	},
-	    	eventClick: function(event, jsEvent, view){
-	    		var data = {event:event, jsEvent:jsEvent, view:view};
-	    		calendar.getEvent(event.id).manageAction("click",event, data);
-	    	},
-	    	eventDrop: function( event, delta, revertFunc, jsEvent, ui, view ) {
-	    		var data = {event:event, delta:delta, revertFunc:revertFunc, jsEvent:jsEvent, ui:ui, view:view};
-	    		calendar.getEvent(event.id).manageAction("drag",event,data);
-	    	},
-	    	eventResize: function( event, delta, revertFunc, jsEvent, ui, view ) {
-	    		var data = {event:event, delta:delta, revertFunc:revertFunc, jsEvent:jsEvent, ui:ui, view:view};
-	    		calendar.getEvent(event.id).manageAction("resize", event, data);
-	    	}
+		if(!this.printed){
+            var selector = this.selector;
+            var calendar = this;
+            var builder = this.builder;
 
-	    });
-	    this.printed = true;
-		
-	}
+            jsonData.editable = true;
+            jsonData.selectable = true;
+            jsonData.events = this.events;
+            jsonData.select = function(start, end){
 
-	setBusinessHours(daysIndex, start, end){
-		this.businessHours = {
-			dow:daysIndex,
-			start:start,
-			end:end
+                var eventsWithin = calendar.getEventsWithin(start, end);
+
+                if(eventsWithin.length == 0){
+                    //if no other events are within the start and end
+                    if(builder != null){
+                        var event = builder.createEvent(calendar.getHighestId() + 1, "test", start, end);
+                        calendar.addEvent(event);
+                    }
+                }
+                else{
+                    calendar.unselectEvents();
+                    for(var i = 0 ; i < eventsWithin.length; i++){
+                        var event = eventsWithin[i];
+                        event.select();
+                    }
+                }
+                calendar.rerenderEvents();
+            };
+
+            jsonData.eventClick = function(event, jsEvent, view){
+                var data = {event:event, jsEvent:jsEvent, view:view};
+                calendar.getEvent(event.id).manageAction("click",event, data);
+                calendar.rerenderEvents();
+            };
+
+            jsonData.eventDrop = function(event, jsEvent, view){
+                var data = {event:event, jsEvent:jsEvent, view:view};
+                calendar.getEvent(event.id).manageAction("drag",event, data);
+                calendar.rerenderEvents();
+            };
+
+            jsonData.eventResize = function( event, delta, revertFunc, jsEvent, ui, view ) {
+                var data = {event:event, delta:delta, revertFunc:revertFunc, jsEvent:jsEvent, ui:ui, view:view};
+                calendar.getEvent(event.id).manageAction("resize",event,data);
+                calendar.rerenderEvents();
+            };
+
+            $(selector).fullCalendar(jsonData);
+            this.printed = true;
 		}
-	}
-
-	getBusinessHours(){
-		return this.businessHours;
-	}
-
-	addView(view){
-		this.addView(view,false);
-	}
-	addView(view, isDefault){
-		this.views.push(view);
-		if(this.defaultView == null || isDefault){
-			this.setDefaultView(view);
+		else{
+			this.rerenderEvents();
 		}
-	}
-	getDefaultView(){
-		return this.defaultView;
-	}
-	setDefaultView(view){
-		this.defaultView = view;
-	}
-	getViewsList(){
-		return this.views.join(",");
 	}
 
 	canCreateEvents(builder){
@@ -124,8 +95,6 @@ class Calendar{
 
 			var eventEnd = new Date(currEvent.end);
 			eventEnd = eventEnd.getTime();
-
-			console.log(start, end, eventStart, eventEnd);
 
 			if((eventStart >= start && eventStart <= end)
 				|| (eventEnd >= start && eventEnd <= end)){
@@ -161,31 +130,12 @@ class Calendar{
 		for(var i = 0 ; i < events.length; i++){
 			if(events[i].isSelected()){
 				events[i].unselect();
-				this.reprintEvent(events[i].id, events[i]);
 			}
 		}
-
-
-	}
-
-	setEvent(id, event){
-		for(var i = 0 ; i < this.events.length; i++){
-			if(this.events[i].id == id){
-				this.events[i] = event;
-				break;
-			}
-		}
-	}
-
-	printEvent(event){
-		$(this.selector).fullCalendar("renderEvent", event);
 	}
 
 	addEvent(event){
 		this.events.push(event);
-		if(this.printed){
-			this.printEvent(event);
-		}
 	}
 
 	removeEvent(id){
@@ -201,21 +151,29 @@ class Calendar{
 		$(this.selector).fullCalendar("removeEvents", id);
 	}
 
+	rerenderEvents(){
+		var eventsToRender = [];
+		for(var i = 0 ; i < this.events.length; i++){
+			if(this.events[i].toRender()){
+				eventsToRender.push(this.events[i]);
+			}
+		}
+
+		for(var i = 0 ; i < eventsToRender.length; i++){
+			$(this.selector).fullCalendar("removeEvents", eventsToRender[i].id);
+		}
+        $(this.selector).fullCalendar("renderEvents", eventsToRender);
+
+		for(var i = 0 ; i < eventsToRender.length; i++){
+			eventsToRender[i].setRendered();
+		}
+	}
+
+	//Fully reprint events, shouldn't be used
 	reprint(){
 		$(this.selector).fullCalendar("removeEvents");
 		$(this.selector).fullCalendar("renderEvents", this.events);
 	}
-
-	reprintEvent(id){
-		this.reprintEvent(id, this.getEvent(id));
-	}
-
-	reprintEvent(id, event){
-		this.setEvent(id, event);
-		$(this.selector).fullCalendar("removeEvents", id);
-		$(this.selector).fullCalendar("renderEvent", event);
-	}
-
 }
 
 class BaseEventBuilder{
@@ -224,7 +182,8 @@ class BaseEventBuilder{
 	}
 	createEvent(id,title,start,end){
 		var event = this.instantiateEvent();
-		return this.fillEvent(event, id, title, start, end);
+        this.fillEvent(event, id, title, start, end);
+		return event;
 	}
 
 	instantiateEvent(){
@@ -236,28 +195,18 @@ class BaseEventBuilder{
 		event.setTitle(title);
 		event.setStart(start);
 		event.setEnd(end);
-		return event;
 	}
 }
 
 class EditableEventBuilder extends BaseEventBuilder{
-	constructor(calendar){
-		super(calendar);
-		this.calendar = calendar;
-	}
-	createEvent(id,title,start,end){
-		return this.fillEvent(this.instantiateEvent(), id, title, start, end);		
-	}
 
 	instantiateEvent(){
 		return new EditableEvent(this.calendar);
 	}
 
 	fillEvent(event, id, title, start, end){
-		event = super.fillEvent(event,id,title,start,end);
-		event.setEditable();
+		super.fillEvent(event,id,title,start,end);
 		event.setColor("blue");
-		return event;
 	}
 }
 
@@ -269,41 +218,59 @@ class AbstractEvent{
 	addRessource(ressourceId){
 		this.ressources.push(ressourceId);
 	}
-	setId(id)			{ this.id = id;				}
-	setTitle(title)		{ this.title = title;		}
-	setStart(start)		{ this.start = start;		}
-	setEnd(end)			{ this.end = end;			}
-	setEditable()		{ this.editable = true;		}
-	setSelectable() 	{ this.selectable = true;	} //DOES THIS EVEN WORK, GOTTA CHECK THIS
+	setId(id)			{ this.setProperty("id", id);			}
+	setTitle(title)		{ this.setProperty("title", title);		}
+	setStart(start)		{ this.setProperty("start", start);		}
+	setEnd(end)			{ this.setProperty("end", end);			}
+	setEditable()		{ this.setProperty("editable", true);	}
+	setSelectable() 	{ this.setProperty("selectable",true);	} //DOES THIS EVEN WORK, GOTTA CHECK THIS
 	setColor(color){
-		this.color = color;
+		this.setProperty("color", color);
 		if(this.initialColor == undefined){
-			this.initialColor = color;
+			this.setProperty("initialColor", color);
 		}
 	}
-
+	setProperty(key, value){
+		this[key] = value;
+	}
 	isInitialColor() {
-		return this.color == this.initialColor
+		return this.color == this.initialColor;
 	}
 	reinitializeColor() {
 		this.color = this.initialColor;
 	}
-
-	copyTo(otherEvent){
-
-		for(var key in this){
-			otherEvent[key] = this[key];
+	pullDataFrom(jsonEvent){
+		for(var key in jsonEvent){
+			this[key] = jsonEvent[key];
 		}
 	}
-	copyFrom(otherEvent){
-		for(var key in otherEvent){
-			this[key] = otherEvent[key];
-		}
-	}
-
 }
-class ActionnableEvent extends AbstractEvent{
-	constructor(calendar){super(calendar);}
+
+class RenderableEvent extends AbstractEvent{
+	constructor(calendar){
+		super(calendar);
+		this.modified = true;
+	}
+	setProperty(key,value){
+		if(this[key] != value){
+			this.setModified();
+		}
+		super.setProperty(key,value);
+	}
+
+	setModified(){
+		this.modified = true;
+	}
+
+	toRender(){
+		return this.modified;
+	}
+	setRendered(){
+		this.modified = false;
+	}
+}
+
+class ActionnableEvent extends RenderableEvent{
 
 	manageAction(actionCode, event){
 		this.manageAction(actionCode, event, {});
@@ -311,7 +278,7 @@ class ActionnableEvent extends AbstractEvent{
 
 	manageAction(actionCode, event, data){
 
-		this.copyFrom(event);
+		this.pullDataFrom(event);
 
 		switch(actionCode){
 			case "drag":
@@ -323,25 +290,19 @@ class ActionnableEvent extends AbstractEvent{
 			case "resize":
 				this.onEventResize(event, data);
 				break;
-
-			default:
 		}
-
-		this.calendar.reprintEvent(this.id, this);
 	}
 
 	onEventDrag(event, data){}
-
 	onEventResize(event, data){}
-
 	onEventClick(event, data){}
 }
 
 class selectableEvent extends ActionnableEvent{
 	constructor(calendar) {super(calendar); this.selected = false;}
 
-	select(){this.selected = true;}
-	unselect(){this.selected = false;}
+	select(){this.setProperty("selected", true);}
+	unselect(){this.setProperty("selected", false);}
 
 	isSelected() {return this.selected;}
 }
@@ -361,7 +322,6 @@ class EditableEvent extends BaseEvent{
 		for(var i = 0 ; i < selectedEvents.length; i++){
 			if(selectedEvents[i].id != this.id && selectedEvents[i].isSelected()){
 				selectedEvents[i].unselect();
-				this.calendar.reprintEvent(selectedEvents[i].id, selectedEvents[i]);
 			}
 		}
 
@@ -379,12 +339,10 @@ class EditableEvent extends BaseEvent{
 	onEventResize(event, data){
 		this.setColor("yellow");
 	}
-
 	select(){
 		super.select();
 		this.setColor("green");
 	}
-
 	unselect(){
 		super.unselect();
 		this.reinitializeColor();
