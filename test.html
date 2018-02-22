@@ -53,7 +53,7 @@
 				onSelection: function(calendar, start, end, eventsWithin){
 					if(eventsWithin.length === 0) {
 		                //if no other events are within the start and end
-		                const newEvent = dynamicEventBuilder.createEvent(calendar.getHighestId() + 1, 'test', start, end);
+		                const newEvent = dynamicEventBuilder.createEvent(calendar.getHighestEventId() + 1, 'test', start, end);
 		                calendar.addEvent(newEvent);
 		            } 
 		            else {

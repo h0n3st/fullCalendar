@@ -31,6 +31,7 @@ class Calendar {
           this.calendarFunctions.onSelection(this, start, end, eventsWithin);
         }
 
+        this.selector.fullCalendar('unselect');
         this.rerenderEvents();
       },
       eventClick: (event) => {
@@ -54,6 +55,7 @@ class Calendar {
 
   }
   setCalendarFunctions(calendarFunctions){
+
     for(const key in calendarFunctions){
       this.calendarFunctions[key] = calendarFunctions[key];
     }
@@ -136,7 +138,6 @@ class EventBuilder {
     this.fillEvent(event, id, title, start, end);
     this.applyActionFunctions(event);
     event.onInitialize();
-
     return event;
   }
 
