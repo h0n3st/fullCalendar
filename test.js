@@ -58,8 +58,6 @@ class Calendar {
 
 	}
 
-
-
 	canCreateEvents(builder) {
 		this.builder = builder;
 	}
@@ -164,7 +162,8 @@ class EditableEventBuilder extends BaseEventBuilder{
 }
 
 class AbstractEvent{
-	constructor(calendar) {
+	constructor(calendar, id, start, end) {
+		this.id = id;
 		this.calendar = calendar;
 		this.editable = false;
 		this.initialColor = null;
@@ -207,9 +206,18 @@ class AbstractEvent{
 	}
 }
 
-class RenderableEvent extends AbstractEvent{
-	constructor(calendar) {
-		super(calendar);
+class InitializableEvent extends AbstractEvent{
+	constructor(calendar, id, start, end){
+		super(calendar, id, start, end);
+		this.onInitialize();
+	}
+
+	onInitialize() {}
+}
+
+class RenderableEvent extends InitializableEvent{
+	constructor(calendar, id, start, end) {
+		super(calendar, id, start, end);
 		this.modified = false;
 	}
 	setProperty(key,value) {
@@ -227,8 +235,8 @@ class RenderableEvent extends AbstractEvent{
 }
 
 class ActionnableEvent extends RenderableEvent{
-	constructor(calendar){
-		super(calendar);
+	constructor(calendar, id, start, end){
+		super(calendar, id, start, end);
 		this.actionFunctions = {
 			drag: () => { 
 				this.onEventDrag(); 
@@ -257,7 +265,10 @@ class ActionnableEvent extends RenderableEvent{
 }
 
 class selectableEvent extends ActionnableEvent{
-	constructor(calendar) {super(calendar); this.selected = false;}
+	constructor(calendar, id, start, end) {
+		super(calendar, id, start, end); 
+		this.selected = false;
+	}
 
 	select() {this.setProperty('selected', true);}
 	unselect() {this.setProperty('selected', false);}
@@ -290,11 +301,16 @@ class revertableEvent extends selectableEvent{
 	}
 }
 
+
+
 class BaseEvent extends revertableEvent{
 }
 
 class EditableEvent extends BaseEvent{
-
+	onInitialize() {
+		this.setColor("blue");
+		this.setEditable();
+	}
 	onEventClick() {
 		const initiallySelected = this.isSelected();
 		
