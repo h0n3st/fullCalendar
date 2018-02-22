@@ -1,7 +1,7 @@
 
 class Calendar {
   constructor(selector, calendarFunctions) {
-    this.selector = selector;
+    this.htmlSelector = selector;
     this.events = [];
     this.views = [];
     this.defaultView = null;
@@ -12,62 +12,57 @@ class Calendar {
       this.calendarFunctions = {};
     }
   }
-  print(jsonData) {
+
+  print(calendarSettings) {
     if (this.printed) {
       this.reprint();
       return;
     }
+    this.selector = $(this.htmlSelector);
+    calendarSettings.editable = true;
+    calendarSettings.selectable = true;
+    calendarSettings.events = this.events;
 
-    jsonData.editable = true;
-    jsonData.selectable = true;
-    jsonData.events = this.events;
+    const calendarFunctions = {
+      viewRender: () => {
+        this.reprint();
+      },
+      select: (start, end) => {
+        const eventsWithin = this.getEventsWithin(start, end);
 
-    jsonData.viewRender = () => {
-      this.reprint();
-    };
+        if(this.calendarFunctions.onSelection){
+          this.calendarFunctions.onSelection(this, start, end, eventsWithin);
+        }
 
-    jsonData.select = (start, end) => {
-
-      const eventsWithin = this.getEventsWithin(start, end);
-
-      if(this.calendarFunctions.onSelection){
-        this.calendarFunctions.onSelection(this, start, end, eventsWithin);
+        this.rerenderEvents();
+      },
+      eventClick: (event) => {
+        this.getEvent(event.id).manageAction('click', event);
+        this.rerenderEvents();
+      },
+      eventDrop: (event) => {
+        this.getEvent(event.id).manageAction('drag', event);
+        this.rerenderEvents();
+      },
+      eventResize: (event) => {
+        this.getEvent(event.id).manageAction('resize', event);
+        this.rerenderEvents();
       }
+    }
 
-      this.rerenderEvents();
-    };
+    const fullCalendarData = Object.assign({},calendarFunctions, calendarSettings);
 
-    jsonData.eventClick = (event) => {
-      this.getEvent(event.id).manageAction('click', event);
-      this.rerenderEvents();
-    };
-
-    jsonData.eventDrop = (event) => {
-      this.getEvent(event.id).manageAction('drag', event);
-      this.rerenderEvents();
-    };
-
-    jsonData.eventResize = (event) => {
-      this.getEvent(event.id).manageAction('resize', event);
-      this.rerenderEvents();
-    };
-
-    $(this.selector).fullCalendar(jsonData);
+    this.selector.fullCalendar(fullCalendarData);
     this.printed = true;
 
   }
-
   setCalendarFunctions(calendarFunctions){
     for(const key in calendarFunctions){
       this.calendarFunctions[key] = calendarFunctions[key];
     }
   }
 
-  canCreateEvents(builder) {
-    this.builder = builder;
-  }
-
-  getHighestId() {
+  getHighestEventId() {
     return this.events.map((event) => {
       return event.id;
     }).reduce((max, currValue) => {
@@ -100,7 +95,7 @@ class Calendar {
   }
 
   unselectEvents() {
-    this.events.forEach((event) => (event.isSelected()) ? event.unselect() : null);
+    this.getSelectedEvents().forEach((event) => event.unselect());
   }
 
   addEvent(event) {
@@ -109,16 +104,16 @@ class Calendar {
 
   removeEvent(id) {
     this.events = this.events.filter((event) => event.id == id);
-    $(this.selector).fullCalendar('removeEvents', id);
+    this.selector.fullCalendar('removeEvents', id);
   }
 
   rerenderEvents() {
 
     const eventsToRender = this.events.filter((event) => event.needsRendering());
 
-    eventsToRender.forEach((event) => $(this.selector).fullCalendar('removeEvents', event.id))
+    eventsToRender.forEach((event) => this.selector.fullCalendar('removeEvents', event.id))
 
-    $(this.selector).fullCalendar('renderEvents', eventsToRender);
+    this.selector.fullCalendar('renderEvents', eventsToRender);
 
     eventsToRender.forEach((event) => event.setMustBeRendered(false));
   }
@@ -140,7 +135,7 @@ class EventBuilder {
   }
 
   createEvent(id, title, start, end) {
-    const event = new BaseEvent(this.calendar);
+    const event = new CalendarEvent(this.calendar);
     this.fillEvent(event, id, title, start, end);
     this.applyActionFunctions(event);
     event.onInitialize();
@@ -157,7 +152,7 @@ class EventBuilder {
   }
 
   applyActionFunctions(event){
-    for(let key in this.eventFunctions){
+    for(const key in this.eventFunctions){
       event.overloadOnActionFunction(key, this.eventFunctions[key]);
     }
   }
@@ -313,8 +308,7 @@ class RevertableEvent extends ActionnableEvent{
   }
 }
 
-class BaseEvent extends RevertableEvent{
-
+class OverloadableEvent extends RevertableEvent{
   constructor(calendar){
     super(calendar);
     this.onActionFunctions = {};
@@ -353,4 +347,8 @@ class BaseEvent extends RevertableEvent{
       this.onActionFunctions.onUnselection(this, this.calendar);
     }
   }
+}
+
+class CalendarEvent extends OverloadableEvent{
+
 }

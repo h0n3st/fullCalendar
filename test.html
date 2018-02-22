@@ -11,11 +11,11 @@
 		<script src = "test.js"></script>
 
 		<script>
-			var calendar = new Calendar("#calendar");
+			const calendar = new Calendar("#calendar");
 
-			var abstractBuilder = new EventBuilder(calendar);
+			const staticEventBuilder = new EventBuilder(calendar);
 
-			var builder = new EventBuilder(calendar, {
+			const dynamicEventBuilder = new EventBuilder(calendar, {
 				onClick: function(event, calendar) {
 					const initiallySelected = event.isSelected();
 					
@@ -24,7 +24,6 @@
 					if(!initiallySelected){
 						event.select();
 					}
-					console.log(event.overloadOnActionFunction);
 				},
 				onDrag: function(event, calendar) {
 					if(!event.isSelected()) {
@@ -40,25 +39,21 @@
 				},
 				onSelection: function(event, calendar) {
 					event.setColor('green');
-					console.log("Selection");
 				},
 				onUnselection: function(event, calendar) {
 					event.reinitializeColor();
-					console.log("unselection");
 				},
 				onInitialize: function(event, calendar) {
 					event.setColor("blue");
 					event.setEditable();
 				}
-
 			});
-
 
 			calendar.setCalendarFunctions({
 				onSelection: function(calendar, start, end, eventsWithin){
 					if(eventsWithin.length === 0) {
 		                //if no other events are within the start and end
-		                const newEvent = builder.createEvent(calendar.getHighestId() + 1, 'test', start, end);
+		                const newEvent = dynamicEventBuilder.createEvent(calendar.getHighestId() + 1, 'test', start, end);
 		                calendar.addEvent(newEvent);
 		            } 
 		            else {
@@ -68,14 +63,13 @@
 				}
 			});
 
-			
-
 			$(document).ready(function() {
 
-				calendar.addEvent(builder.createEvent("3", "Rendez-vous", "2018-02-19 13:10", "2018-02-15 13:30"));
-				calendar.addEvent(abstractBuilder.createEvent("2","Abstract Rendez-vous", "2018-02-19 13:00", "2018-02-15 14:00"));
+				calendar.addEvent(dynamicEventBuilder.createEvent("3", "Rendez-vous", "2018-02-19 13:10", "2018-02-15 13:30"));
+				calendar.addEvent(staticEventBuilder.createEvent("2","Abstract Rendez-vous", "2018-02-19 13:00", "2018-02-15 14:00"));
+				calendar.addEvent(dynamicEventBuilder.createEvent("4","DOES IT SHOW", "2018-02-19 12:00", "2018-02-15 14:00"));
 
-				var jsonData = {
+				const calendarSettings = {
                     header:{
                         left: "prev,next today",
                         center:"title",
@@ -91,15 +85,7 @@
                         end:"17:00"
                     }
                 };
-				calendar.print(jsonData);
-
-				var event = builder.createEvent("4","DOES IT SHOW", "2018-02-19 12:00", "2018-02-15 14:00");
-				calendar.addEvent(event);
- 		
-				calendar.print(); 
-
-				calendar.reprint();
-
+				calendar.print(calendarSettings);
 			});
 		</script>
 	</head> 
