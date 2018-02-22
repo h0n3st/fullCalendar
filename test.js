@@ -1,16 +1,13 @@
 
 class Calendar {
-  constructor(selector, calendarFunctions) {
+  constructor(selector) {
     this.htmlSelector = selector;
     this.events = [];
     this.views = [];
     this.defaultView = null;
     this.builder = null;
     this.printed = false;
-    this.calendarFunctions = calendarFunctions;
-    if(!this.calendarFunctions){
-      this.calendarFunctions = {};
-    }
+    this.calendarFunctions = {};
   }
 
   print(calendarSettings) {
@@ -203,16 +200,16 @@ class AbstractEvent{
 }
 
 class InitializableEvent extends AbstractEvent{
-  constructor(calendar, id, start, end){
-    super(calendar, id, start, end);
+  constructor(calendar){
+    super(calendar);
   }
 
   onInitialize() {}
 }
 
 class RenderableEvent extends InitializableEvent{
-  constructor(calendar, id, start, end) {
-    super(calendar, id, start, end);
+  constructor(calendar) {
+    super(calendar);
     this.modified = false;
   }
   setProperty(key,value) {
