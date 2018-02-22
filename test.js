@@ -1,151 +1,352 @@
 
-class Calendar{
-	constructor(selector){
-		this.selector = selector;
-		this.ressources = [];
-		this.disponibilities = [];
-		this.events = [];
-		this.views = [];
-		this.defaultView = null;
-	}
-	print(){
+class Calendar {
+  constructor(selector) {
+    this.htmlSelector = selector;
+    this.events = [];
+    this.views = [];
+    this.defaultView = null;
+    this.builder = null;
+    this.printed = false;
+    this.calendarFunctions = {};
+  }
 
-		var JSONressources = [];
-		for (var i = 0 ; i < this.ressources.length;i++){
-			JSONressources.push(this.ressources[i].toJSON());
-		}
+  print(calendarSettings) {
+    if (this.printed) {
+      this.reprint();
+      return;
+    }
+    this.selector = $(this.htmlSelector);
+    calendarSettings.editable = true;
+    calendarSettings.selectable = true;
+    calendarSettings.events = this.events;
 
-		var JSONevents = [];
-		for(var i = 0 ; i < this.events.length;i++){
-			JSONevents.push(this.events[i].toJSON());
-		}
-		for(var i = 0 ; i < this.disponibilities.length;i++){
-			JSONevents.push(this.disponibilities[i].toJSON());
-		}
+    const calendarFunctions = {
+      viewRender: () => {
+        this.reprint();
+      },
+      select: (start, end) => {
+        const eventsWithin = this.getEventsWithin(start, end);
 
-		$(this.selector).fullCalendar({
-	    	schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
-	    	header:{
-	    		left: "prev,next today",
-	    		center:"title",
-	    		right:this.getViewsList()
-	    	},
-	    	defaultView:this.getDefaultView(),
-	    	businessHours:{
-	    		dow:[1,2,3,4,5],
-	    		start:"10:00",
-	    		end:"18:00"
-	    	},
-	    	ressources:JSONressources,
-	    	events:JSONevents
-	        // put your options and callbacks here
-	    })
-	}
+        if(this.calendarFunctions.onSelection){
+          this.calendarFunctions.onSelection(this, start, end, eventsWithin);
+        }
 
-	addView(view){
-		this.views.push(view);
-		if(this.defaultView == null){
-			this.setDefaultView(view);
-		}
-	}
+        this.selector.fullCalendar('unselect');
+        this.rerenderEvents();
+      },
+      eventClick: (event) => {
+        this.getEvent(event.id).manageAction('click', event);
+        this.rerenderEvents();
+      },
+      eventDrop: (event) => {
+        this.getEvent(event.id).manageAction('drag', event);
+        this.rerenderEvents();
+      },
+      eventResize: (event) => {
+        this.getEvent(event.id).manageAction('resize', event);
+        this.rerenderEvents();
+      }
+    }
 
-	setDefaultView(view){
-		this.defaultView = view;
-	}
+    const fullCalendarData = Object.assign({},calendarFunctions, calendarSettings);
 
-	getViewsList(){
-		var list = "";
-		if(this.views.length >= 1){
-			list += this.views[0];
-		}
-		for(var i = 1 ; i < this.views.length;i++){
-			list+= "," + this.views[i];
-		}
-		return list;
-	}
+    this.selector.fullCalendar(fullCalendarData);
+    this.printed = true;
 
-	getDefaultView(){
-		return this.defaultView;
-	}
-	addRessource(ressource){
+  }
+  setCalendarFunctions(calendarFunctions){
 
-		this.ressources.push(ressource);
-	}
+    for(const key in calendarFunctions){
+      this.calendarFunctions[key] = calendarFunctions[key];
+    }
+  }
 
-	addEventDisponibility(eventDisponibility){
+  getHighestEventId() {
+    return this.events.map((event) => {
+      return event.id;
+    }).reduce((max, currValue) => {
+      return (currValue > max) ? currValue : max;
+    });
+  }
 
-		this.disponibilities.push(eventDisponibility);
-	}
+  getEventsWithin(start, end) {
+    const startTime = (new Date(start)).getTime();
+    const endTime = (new Date(end)).getTime();
 
-	addEvent(event){
+    return this.events.map((event) => {
+      return {
+        event: event,
+        start: (new Date(event.start)).getTime(),
+        end: (new Date(event.end)).getTime()
+      };
+    }).filter((value) => {
+      return (value.start >= startTime && value.start <= endTime) || 
+          (value.end >= startTime && value.end <= endTime);
+    }).map((value) => value.event);
+  }
 
-		this.events.push(event);
-	}
+  getEvent(id) {  
+    return this.events.find((event) => event.id == id);
+  }
 
-	isRessourceFree(ressourceId, start, end){
-		for(var i = 0 ; i < this.disponibilities ; i++){
-			var disponibility = this.disponibilities[i];
-			
+  getSelectedEvents() {
+    return this.events.filter((event) => event.isSelected());
+  }
 
-		}
-	}
-	
+  unselectEvents() {
+    this.getSelectedEvents().forEach((event) => event.unselect());
+  }
+
+  addEvent(event) {
+    this.events.push(event);
+  }
+
+  removeEvent(id) {
+    this.events = this.events.filter((event) => event.id == id);
+    this.selector.fullCalendar('removeEvents', id);
+  }
+
+  rerenderEvents() {
+
+    const eventsToRender = this.events.filter((event) => event.needsRendering());
+
+    eventsToRender.forEach((event) => this.selector.fullCalendar('removeEvents', event.id))
+
+    this.selector.fullCalendar('renderEvents', eventsToRender);
+
+    eventsToRender.forEach((event) => event.setMustBeRendered(false));
+  }
+
+  //Fully reprint events, shouldn't be used
+  reprint() {
+    this.events.forEach((event) => event.setMustBeRendered(true));
+    this.rerenderEvents();
+  }
 }
 
-function createRessource(id, title){
-	return new Ressource(id,title);
-}
+class EventBuilder {
+  constructor(calendar, jsonEventFunctions) {
+    this.calendar = calendar;
+    this.eventFunctions = {};
+    if(jsonEventFunctions){
+      this.eventFunctions = jsonEventFunctions;
+    }
+  }
 
-function createEvent(id, title, start, end){
-	return new AbstractEvent(id, title, start, end);
-}
+  createEvent(id, title, start, end) {
+    const event = new CalendarEvent(this.calendar);
+    this.fillEvent(event, id, title, start, end);
+    this.applyActionFunctions(event);
+    event.onInitialize();
+    return event;
+  }
 
-class Ressource{
-	constructor(id, title){
-		this.id = id;
-		this.title = title;
-	}
 
-	toJSON(){
-		return {"id":this.id,"title":this.title};
-	}
+  fillEvent(event, id, title, start, end) {
+    event.setId(id);
+    event.setTitle(title);
+    event.setStart(start);
+    event.setEnd(end);
+  }
+
+  applyActionFunctions(event){
+    for(const key in this.eventFunctions){
+      event.overloadOnActionFunction(key, this.eventFunctions[key]);
+    }
+  }
 }
 
 class AbstractEvent{
-	constructor(id, title, start, end){
-		this.id = id;
-		this.title = title;
-		this.start = start;//new Date(start);
-		this.end = end;//new Date(end);
-		this.ressources = [];
-	}
-	toJSON(){
-		return {
-			"id":this.id,
-			"title":this.title,
-			"start":this.start,
-			"end":this.end
-		}
-	}
-	getStartTime(){
-		return this.start; //tmp
-	}
-	getEndTime(){
-		return this.end //tmp
-	}
-	addRessource(ressourceId){
-		this.ressources.push(ressourceId);
-	}
+  constructor(calendar) {
+    this.calendar = calendar;
+    this.editable = false;
+    this.initialColor = null;
+  }
+
+  setId(id) { 
+    this.setProperty('id', id);
+  }
+  setTitle(title) {
+    this.setProperty('title', title);   
+  }
+  setStart(start) {
+    this.setProperty('start', start);   
+  }
+  setEnd(end) {
+    this.setProperty('end', end);     
+  }
+  setEditable() {
+    this.setProperty('editable', true); 
+  }
+  setColor(color) {
+    this.setProperty('color', color);
+    if (!this.initialColor) {
+      this.setProperty('initialColor', color);
+    }
+  }
+  setProperty(key, value) {
+    this[key] = value;
+  }
+  isInitialColor() {
+    return this.color == this.initialColor;
+  }
+  reinitializeColor() {
+    this.setProperty('color', this.initialColor);
+  }
+  pullDataFrom(jsonEvent) {
+    for(const key in jsonEvent) {
+      this[key] = jsonEvent[key];
+    }
+  }
 }
 
-/*
-We need to have 2 views :
-	The client view
-		Here we simply need to show available ressources for the client research
+class InitializableEvent extends AbstractEvent{
+  constructor(calendar){
+    super(calendar);
+  }
 
-	The clinic view
+  onInitialize() {}
+}
+
+class RenderableEvent extends InitializableEvent{
+  constructor(calendar) {
+    super(calendar);
+    this.modified = false;
+  }
+  setProperty(key,value) {
+    if(this[key] != value) {
+      this.setMustBeRendered(true);
+    }
+    super.setProperty(key,value);
+  }
+  setMustBeRendered(mustRender) {
+    this.modified = mustRender;
+  }
+  needsRendering() {
+    return this.modified;
+  }
+}
+
+class SelectableEvent extends RenderableEvent{
+  constructor(calendar) {
+    super(calendar); 
+    this.selected = false;
+  }
+
+  select() {
+    this.setProperty('selected', true);
+    this.onSelection();
+  }
+  unselect() {
+    this.setProperty('selected', false);
+    this.onUnselection();
+  }
+
+  onSelection(){ }
+
+  onUnselection(){ }
+
+  isSelected() {
+    return this.selected;
+  }
+}
+
+class ActionnableEvent extends SelectableEvent{
+  constructor(calendar){
+    super(calendar);
+    this.actionFunctions = {
+      drag: () => { 
+        this.onDrag(); 
+      },
+      click: () => { 
+        this.onClick(); 
+      },
+      resize: () =>  { 
+        this.onResize(); 
+      }
+    };
+
+    this.overloadedOnActionFunctions = {};
+
+  }
+  
+  manageAction(actionCode, event) {
+    this.manageAction(actionCode, event, {});
+  }
+
+  manageAction(actionCode, event) {
+    this.pullDataFrom(event);
+    this.actionFunctions[actionCode]();
+  }
+}
 
 
+class RevertableEvent extends ActionnableEvent{
+  manageAction(actionCode, event) {
+    this.saveData();
+    super.manageAction(actionCode,event);
+    this.clearSavedData();
+  }
 
-*/
+  saveData() {
+    const initialData = {};
+    for(const key in this) {
+      initialData[key] = this[key];
+    }
 
+    this.initialData = initialData;
+  }
+
+  clearSavedData() {
+    this.initialData = undefined;
+  }
+  revert() {
+    this.pullDataFrom(this.initialData);
+    this.setMustBeRendered(true);
+  }
+}
+
+class OverloadableEvent extends RevertableEvent{
+  constructor(calendar){
+    super(calendar);
+    this.onActionFunctions = {};
+  }
+
+  overloadOnActionFunction(name, func){
+    this.onActionFunctions[name] = func;
+  }
+  onDrag(){
+    if(this.onActionFunctions.onDrag){
+      this.onActionFunctions.onDrag(this, this.calendar);
+    }
+  }
+  onResize(){
+    if(this.onActionFunctions.onResize){
+      this.onActionFunctions.onResize(this, this.calendar);
+    }
+  }
+  onClick(){
+    if(this.onActionFunctions.onClick){
+      this.onActionFunctions.onClick(this, this.calendar);
+    }
+  }
+  onInitialize(){
+    if(this.onActionFunctions.onInitialize){
+      this.onActionFunctions.onInitialize(this, this.calendar);
+    }
+  }
+  onSelection(){
+    if(this.onActionFunctions.onSelection){
+      this.onActionFunctions.onSelection(this, this.calendar);
+    }
+  }
+  onUnselection(){
+    if(this.onActionFunctions.onUnselection){
+      this.onActionFunctions.onUnselection(this, this.calendar);
+    }
+  }
+}
+
+class CalendarEvent extends OverloadableEvent{
+
+}

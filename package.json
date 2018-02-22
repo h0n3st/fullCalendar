@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/h0n3st/fullCalendar/issues"
   },
-  "homepage": "https://github.com/h0n3st/fullCalendar#readme"
+  "homepage": "https://github.com/h0n3st/fullCalendar#readme",
+  "dependencies": {
+    "fullcalendar": "^3.8.2"
+  }
 }
