@@ -10,6 +10,9 @@ class Calendar {
     this.calendarFunctions = {};
   }
 
+  //This wraps the call to fullcalendar(initialData)
+  //It also adds the event handlers and pull the effective data from the locally created event objects
+  //Once the calendar has already been printed, recalling this will only refresh the events.
   print(calendarSettings) {
     if (this.printed) {
       this.reprint();
@@ -25,37 +28,39 @@ class Calendar {
         this.reprint();
       },
       select: (start, end) => {
-        const eventsWithin = this.getEventsWithin(start, end);
-
+        
         if(this.calendarFunctions.onSelection){
+          const eventsWithin = this.getEventsWithin(start, end);
           this.calendarFunctions.onSelection(this, start, end, eventsWithin);
         }
 
         this.selector.fullCalendar('unselect');
         this.rerenderEvents();
       },
-      eventClick: (event) => {
-        this.getEvent(event.id).manageAction('click', event);
+      eventClick: (rawCalendarEvent) => {
+        this.getEvent(rawCalendarEvent.id).manageAction('click', rawCalendarEvent);
         this.rerenderEvents();
       },
-      eventDrop: (event) => {
-        this.getEvent(event.id).manageAction('drag', event);
+      eventDrop: (rawCalendarEvent) => {
+        this.getEvent(rawCalendarEvent.id).manageAction('drag', rawCalendarEvent);
         this.rerenderEvents();
       },
-      eventResize: (event) => {
-        this.getEvent(event.id).manageAction('resize', event);
+      eventResize: (rawCalendarEvent) => {
+        this.getEvent(rawCalendarEvent.id).manageAction('resize', rawCalendarEvent);
         this.rerenderEvents();
       }
     }
 
-    const fullCalendarData = Object.assign({},calendarFunctions, calendarSettings);
+    const fullCalendarData = Object.assign(calendarSettings, calendarFunctions);
 
     this.selector.fullCalendar(fullCalendarData);
+    //This needs to be called to make sure the initially created evens are consistent with the events created in the future
+    this.updateEventsData();
     this.printed = true;
 
   }
-  setCalendarFunctions(calendarFunctions){
 
+  setCalendarFunctions(calendarFunctions){
     for(const key in calendarFunctions){
       this.calendarFunctions[key] = calendarFunctions[key];
     }
@@ -76,12 +81,12 @@ class Calendar {
     return this.events.map((event) => {
       return {
         event: event,
-        start: (new Date(event.start)).getTime(),
-        end: (new Date(event.end)).getTime()
+        start: new Date(event.start),
+        end: new Date(event.end)
       };
     }).filter((value) => {
-      return (value.start >= startTime && value.start <= endTime) || 
-          (value.end >= startTime && value.end <= endTime);
+      return (value.start > startTime && value.start < endTime) || 
+          (value.end < endTime && value.end > startTime);
     }).map((value) => value.event);
   }
 
@@ -101,11 +106,20 @@ class Calendar {
     this.events.push(event);
   }
 
+  //Update all event with the locally contained data in the fullCalendar jquery object
+  updateEventsData(){
+    this.selector.fullCalendar('clientEvents').forEach((rawCalendarEvent) => {
+      this.events.find((event) => rawCalendarEvent.id == event.id).pullDataFrom(rawCalendarEvent);
+    });
+  }
+
+  //Removes an event from the event array and remove it from the calendar view
   removeEvent(id) {
     this.events = this.events.filter((event) => event.id == id);
     this.selector.fullCalendar('removeEvents', id);
   }
 
+  //Pulls the event flagged as modified, erase them, then reprint them and remove their modified flag
   rerenderEvents() {
 
     const eventsToRender = this.events.filter((event) => event.needsRendering());
@@ -133,16 +147,16 @@ class EventBuilder {
     }
   }
 
-  createEvent(id, title, start, end) {
+  createEvent(id, start, end, title) {
     const event = new CalendarEvent(this.calendar);
-    this.fillEvent(event, id, title, start, end);
+    this.fillEvent(event, id, start, end, title);
     this.applyActionFunctions(event);
     event.onInitialize();
     return event;
   }
 
 
-  fillEvent(event, id, title, start, end) {
+  fillEvent(event, id, start, end, title) {
     event.setId(id);
     event.setTitle(title);
     event.setStart(start);
@@ -201,10 +215,6 @@ class AbstractEvent{
 }
 
 class InitializableEvent extends AbstractEvent{
-  constructor(calendar){
-    super(calendar);
-  }
-
   onInitialize() {}
 }
 
@@ -242,9 +252,8 @@ class SelectableEvent extends RenderableEvent{
     this.onUnselection();
   }
 
-  onSelection(){ }
-
-  onUnselection(){ }
+  onSelection() { }
+  onUnselection() { }
 
   isSelected() {
     return this.selected;
@@ -267,15 +276,10 @@ class ActionnableEvent extends SelectableEvent{
     };
 
     this.overloadedOnActionFunctions = {};
-
   }
   
-  manageAction(actionCode, event) {
-    this.manageAction(actionCode, event, {});
-  }
-
-  manageAction(actionCode, event) {
-    this.pullDataFrom(event);
+  manageAction(actionCode, rawCalendarEvent) {
+    this.pullDataFrom(rawCalendarEvent);
     this.actionFunctions[actionCode]();
   }
 }

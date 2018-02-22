@@ -1,19 +1,23 @@
 <!DOCTYPE HTML> 
-<html lang="en"> 
+<html lang='en'> 
 	<head> 
-		<meta http-equiv="content-type" content="text/html; charset=utf-8"> 
+		<meta http-equiv='content-type' content='text/html; charset=utf-8'> 
 
 		<title>FullCalendar</title> 
 		<link rel='stylesheet' href='node_modules/fullcalendar/dist/fullcalendar.css' />
 		<script src='node_modules/jquery/dist/jquery.min.js'></script>
 		<script src='node_modules/moment/min/moment.min.js'></script>
 		<script src='node_modules/fullcalendar/dist/fullcalendar.js'></script>
-		<script src = "test.js"></script>
+		<script src = 'test.js'></script>
 
 		<script>
-			const calendar = new Calendar("#calendar");
+			const calendar = new Calendar('#calendar');
 
-			const staticEventBuilder = new EventBuilder(calendar);
+			const staticEventBuilder = new EventBuilder(calendar, {
+				onInitialize: function(event){
+					event.setColor('red');
+				}
+			});
 
 			const dynamicEventBuilder = new EventBuilder(calendar, {
 				onClick: function(event, calendar) {
@@ -28,13 +32,11 @@
 				onDrag: function(event, calendar) {
 					if(!event.isSelected()) {
 						event.revert();
-						event.setColor('red');
 					}
 				},
 				onResize: function(event, calendar) {
 					if(!event.isSelected()) {
 						event.revert();
-						event.setColor('red');
 					}
 				},
 				onSelection: function(event, calendar) {
@@ -44,7 +46,7 @@
 					event.reinitializeColor();
 				},
 				onInitialize: function(event, calendar) {
-					event.setColor("blue");
+					event.setColor('blue');
 					event.setEditable();
 				}
 			});
@@ -53,7 +55,7 @@
 				onSelection: function(calendar, start, end, eventsWithin){
 					if(eventsWithin.length === 0) {
 		                //if no other events are within the start and end
-		                const newEvent = dynamicEventBuilder.createEvent(calendar.getHighestEventId() + 1, 'test', start, end);
+		                const newEvent = dynamicEventBuilder.createEvent(calendar.getHighestEventId() + 1, start, end);
 		                calendar.addEvent(newEvent);
 		            } 
 		            else {
@@ -65,25 +67,27 @@
 
 			$(document).ready(function() {
 
-				calendar.addEvent(dynamicEventBuilder.createEvent("3", "Rendez-vous", "2018-02-19 13:10", "2018-02-15 13:30"));
-				calendar.addEvent(staticEventBuilder.createEvent("2","Abstract Rendez-vous", "2018-02-19 13:00", "2018-02-15 14:00"));
-				calendar.addEvent(dynamicEventBuilder.createEvent("4","DOES IT SHOW", "2018-02-19 12:00", "2018-02-15 14:00"));
+				calendar.addEvent(dynamicEventBuilder.createEvent('3', '2018-02-19 13:10', '2018-02-19 13:30'));
+				calendar.addEvent(staticEventBuilder.createEvent('2', '2018-02-19 13:00', '2018-02-19 14:00'));
+				calendar.addEvent(dynamicEventBuilder.createEvent('4', '2018-02-19 12:00', '2018-02-19 14:00'));
 
 				const calendarSettings = {
                     header:{
-                        left: "prev,next today",
-                        center:"title",
-                        right:"month,agendaWeek,agendaDay"
+                        left: 'prev,next today',
+                        center:'title',
+                        right:'listWeek,agendaWeek,agendaDay'
                     },
                     allDaySlot:false,
-                    minTime:"9:00",
-                    maxTime:"17:00",
-                    defaultView:"agendaWeek",
+                    minTime:'9:00',
+                    maxTime:'17:00',
+                    defaultView:'agendaWeek',
                     businessHours:{
                         dow:[1,2,3,4,5],
-                        start:"9:00",
-                        end:"17:00"
-                    }
+                        start:'9:00',
+                        end:'17:00'
+                    },
+                    slotDuration: '00:05:00'
+
                 };
 				calendar.print(calendarSettings);
 			});
