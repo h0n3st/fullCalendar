@@ -24,9 +24,7 @@ class Calendar {
     calendarSettings.events = this.events;
 
     const calendarFunctions = {
-      viewRender: () => {
-        this.reprint();
-      },
+      viewRender: () => this.reprint(),
       select: (start, end) => {
         
         if(this.calendarFunctions.onSelection){

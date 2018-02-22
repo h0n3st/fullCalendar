@@ -54,9 +54,15 @@
 			calendar.setCalendarFunctions({
 				onSelection: function(calendar, start, end, eventsWithin){
 					if(eventsWithin.length === 0) {
-		                //if no other events are within the start and end
-		                const newEvent = dynamicEventBuilder.createEvent(calendar.getHighestEventId() + 1, start, end);
-		                calendar.addEvent(newEvent);
+
+						const startDate = new Date(start);
+						const endDate = new Date(end);
+
+						if(startDate.getDay() == endDate.getDay()){
+							//if no other events are within the start and end
+			                const newEvent = dynamicEventBuilder.createEvent(calendar.getHighestEventId() + 1, start, end);
+			                calendar.addEvent(newEvent);
+						}
 		            } 
 		            else {
 		                calendar.unselectEvents();
