@@ -124,6 +124,7 @@ class ActionnableEvent extends SelectableEvent{
 }
 
 
+
 class RevertableEvent extends ActionnableEvent{
   manageAction(actionCode, event) {
     this.saveData();
@@ -190,6 +191,7 @@ class OverloadableEvent extends RevertableEvent{
   }
 }
 
-class CalendarEvent extends OverloadableEvent{
 
+
+export class CalendarEvent extends OverloadableEvent{
 }

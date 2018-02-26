@@ -1,6 +1,6 @@
-require("./eventBuilder.js");
+import {EventBuilder} from "./EventBuilder"
 
-class Calendar {
+export class Calendar {
   constructor(selector) {
     this.htmlSelector = selector;
     this.events = [];
@@ -20,6 +20,8 @@ class Calendar {
     calendarSettings.editable = true;
     calendarSettings.selectable = true;
     calendarSettings.events = this.events;
+
+    this.businessHours = calendarSettings.businessHours;
 
     const calendarFunctions = {
       viewRender: () => {
@@ -63,6 +65,11 @@ class Calendar {
   }
 
   getHighestEventId() {
+
+    if(this.events.length == 0){
+      return 0;
+    }
+
     return this.events.map((event) => {
       return event.id;
     }).reduce((max, currValue) => {
@@ -81,8 +88,8 @@ class Calendar {
         end: (new Date(event.end)).getTime()
       };
     }).filter((value) => {
-      return (value.start >= startTime && value.start <= endTime) || 
-          (value.end >= startTime && value.end <= endTime);
+      return (value.start > startTime && value.start < endTime) || 
+          (value.end > startTime && value.end < endTime);
     }).map((value) => value.event);
   }
 
@@ -102,8 +109,9 @@ class Calendar {
     this.events.push(event);
   }
 
-  removeEvent(id) {
-    this.events = this.events.filter((event) => event.id == id);
+  removeEvent(event) {
+    const id = event.id;
+    this.events = this.events.filter((currEvent) => currEvent.id != id);
     this.selector.fullCalendar('removeEvents', id);
   }
 

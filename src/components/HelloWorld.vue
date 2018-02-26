@@ -1,30 +1,31 @@
 <template>
-  <div class=wrapper>
-    <color-picker @input="newColor => { color = newColor }" />
-    <div id=calendar></div>
+
+  <div class=wrapper v-on:keyup.delete="deleteSelectedEvents()">
+    <input v-on:keyup.delete="deleteSelectedEvents()">
+    <div id=calendar ></div>
   </div>
 </template>
 
 <script>
-import ColorPicker from '@/components/ColorPicker'
-import Calendar from '@/services/Calendar/Calendar'
+import {Calendar} from '@/services/calendar/Calendar'
+import {EventBuilder} from '@/services/calendar/EventBuilder'
 
 
 export default {
   name: 'HelloWorld',
-  components: { 'color-picker': ColorPicker },
-  mounted() {
-
-    const calendar = new Calendar('#calendar');
-
-    const builder = new EventBuilder(calendar, {
+  created() {
+    this.calendar = new Calendar("#calendar");
+    this.builder = new EventBuilder(this.calendar, {
       onInitialize: (event, calendar) => {
         event.setEditable();
-        event.setColor("green");
+        event.setColor("blue");
       },
       onClick: (event, calendar) =>{
+
+        const eventIsInitiallySelected = event.isSelected();
+
         calendar.unselectEvents();
-        if(event.isSelected()){
+        if(eventIsInitiallySelected){
           event.unselect();
         }
         else{
@@ -32,28 +33,49 @@ export default {
         }
       },
       onSelection(event){
-        event.setColor("blue");
+        event.setColor("green");
       },
       onUnselection(event){
         event.reinitializeColor();
       }
     });
 
-    calendar.setCalendarFunctions({
-        onSelection: function(calendar, start, end, eventsWithin){
-          if(eventsWithin.length === 0) {
-                    //if no other events are within the start and end
-                    const newEvent = builder.createEvent(calendar.getHighestEventId() + 1, 'test', start, end);
-                    calendar.addEvent(newEvent);
-                } 
-                else {
-                    calendar.unselectEvents();
-                    eventsWithin.forEach((event) => event.select());
-                }
+    const builder = this.builder;
+
+    this.calendar.setCalendarFunctions({
+      onSelection: function(calendar, start, end, eventsWithin){
+        if(eventsWithin.length === 0) {
+
+          const startDate = new Date(start);
+          const endDate = new Date(end);
+
+          const differenceInMs = endDate - startDate;
+          const THREE_HOURS = 1000 * 60 * 60 * 3;
+          if(differenceInMs < THREE_HOURS){
+            const newEvent = builder.createEvent(calendar.getHighestEventId() + 1, 'test', start, end);
+            calendar.addEvent(newEvent);
+          }
+        } 
+        else {
+          calendar.unselectEvents();
+          eventsWithin.forEach((event) => event.select());
         }
-      });
-    
-    calendar.print({
+      }
+    });
+  },
+  data:{
+    calendar:null,
+    builder:null
+  },
+  methods:{
+    deleteSelectedEvents() {
+      this.calendar.getSelectedEvents().forEach((event) => this.calendar.removeEvent(event));
+      console.log(this.calendar.events.length);
+    }
+  },
+  mounted() {
+
+    this.calendar.print({
       header: {
         left: 'prev, next, today',
         center: 'title',
@@ -67,16 +89,9 @@ export default {
       allDaySlot: false,
       defaultView: 'agendaWeek',
       selectable: true,
-      selectHelper: true,
-      eventOverlap: false,
+      eventOverlap: true,
       editable: true
     });
-  },
-  data () {
-    return {
-      msg: 'Welcome to Your Vue.js App',
-      color: ''
-    }
   }
 }
 </script>
