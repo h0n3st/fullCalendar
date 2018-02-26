@@ -18,6 +18,18 @@ class AbstractEvent{
   setEnd(end) {
     this.setProperty('end', end);     
   }
+
+  isWithin(start, end){
+    const startTime = (new Date(start)).getTime();
+    const endTime = (new Date(end)).getTime();
+
+    const eventStartTime = (new Date(this.start)).getTime();
+    const eventEndTime = (new Date(this.end)).getTime();
+
+    return (eventStartTime > startTime && eventStartTime < endTime) || 
+          (eventEndTime > startTime && eventEndTime < endTime);
+  }
+
   setEditable() {
     this.setProperty('editable', true); 
   }

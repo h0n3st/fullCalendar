@@ -9,16 +9,16 @@ export class EventBuilder {
     }
   }
 
-  createEvent(id, title, start, end) {
+  createEvent(id, start, end, title) {
     const event = new CalendarEvent(this.calendar);
-    this.fillEvent(event, id, title, start, end);
+    this.fillEvent(event, id, start, end, title);
     this.applyActionFunctions(event);
     event.onInitialize();
     return event;
   }
 
 
-  fillEvent(event, id, title, start, end) {
+  fillEvent(event, id, start, end, title) {
     event.setId(id);
     event.setTitle(title);
     event.setStart(start);

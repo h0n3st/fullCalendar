@@ -87,19 +87,11 @@ export class Calendar {
   }
 
   getEventsWithin(start, end) {
+
     const startTime = (new Date(start)).getTime();
     const endTime = (new Date(end)).getTime();
 
-    return this.events.map((event) => {
-      return {
-        event: event,
-        start: (new Date(event.start)).getTime(),
-        end: (new Date(event.end)).getTime()
-      };
-    }).filter((value) => {
-      return (value.start > startTime && value.start < endTime) || 
-          (value.end > startTime && value.end < endTime);
-    }).map((value) => value.event);
+    return this.events.filter((event) => event.isWithin(startTime, endTime));
   }
 
   getEvent(id) {  
@@ -122,6 +114,10 @@ export class Calendar {
     const id = event.id;
     this.events = this.events.filter((currEvent) => currEvent.id != id);
     this.selector.fullCalendar('removeEvents', id);
+  }
+
+  removeSelectedEvents(){
+    this.getSelectedEvents().forEach((event) => this.removeEvent(event));
   }
 
   rerenderEvents() {

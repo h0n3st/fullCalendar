@@ -1,6 +1,6 @@
 <template>
 
-  <div class=wrapper v-on:keyup.delete="deleteSelectedEvents()">
+  <div class=wrapper>
     <div id=calendar ></div>
   </div>
 </template>
@@ -20,7 +20,6 @@ export default {
         event.setColor("blue");
       },
       onClick: (event, calendar) =>{
-
         const eventIsInitiallySelected = event.isSelected();
 
         calendar.unselectEvents();
@@ -51,7 +50,7 @@ export default {
           const differenceInMs = endDate - startDate;
           const THREE_HOURS = 1000 * 60 * 60 * 3;
           if(differenceInMs < THREE_HOURS){
-            const newEvent = builder.createEvent(calendar.getHighestEventId() + 1, 'test', start, end);
+            const newEvent = builder.createEvent(calendar.getHighestEventId() + 1, start, end,  'test');
             calendar.addEvent(newEvent);
           }
         } 
@@ -65,7 +64,7 @@ export default {
      window.addEventListener('keyup', (event) => {
       const keyName = event.key;
       if(keyName === 'Delete'){   
-        this.deleteSelectedEvents();
+         this.calendar.removeSelectedEvents();
       }
     });
   },
@@ -73,12 +72,7 @@ export default {
     calendar:null,
     builder:null
   },
-  methods:{
-    deleteSelectedEvents() {
-      this.calendar.getSelectedEvents().forEach((event) => this.calendar.removeEvent(event));
-      console.log(this.calendar.events.length);
-    }
-  },
+
   mounted() {
 
 
