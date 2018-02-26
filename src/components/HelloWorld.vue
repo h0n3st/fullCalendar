@@ -1,7 +1,6 @@
 <template>
 
   <div class=wrapper v-on:keyup.delete="deleteSelectedEvents()">
-    <input v-on:keyup.delete="deleteSelectedEvents()">
     <div id=calendar ></div>
   </div>
 </template>
@@ -62,6 +61,13 @@ export default {
         }
       }
     });
+
+     window.addEventListener('keyup', (event) => {
+      const keyName = event.key;
+      if(keyName === 'Delete'){   
+        this.deleteSelectedEvents();
+      }
+    });
   },
   data:{
     calendar:null,
@@ -74,6 +80,8 @@ export default {
     }
   },
   mounted() {
+
+
 
     this.calendar.print({
       header: {

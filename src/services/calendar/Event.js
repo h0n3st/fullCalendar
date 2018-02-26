@@ -98,7 +98,22 @@ class ActionnableEvent extends SelectableEvent{
   constructor(calendar){
     super(calendar);
     this.actionFunctions = {
-      drag: () => { 
+      drag: (data) => { 
+
+        if(data.delta){
+
+          var appendToDate = (date, append) => {
+            date = new Date(date);
+            append = new Date(append);
+            
+            const newDate = new Date(date.getTime() + append.getTime());
+            return newDate.toISOString();
+          }
+
+          this.setStart(appendToDate(this.start, data.delta));
+          this.setEnd(appendToDate(this.end, data.delta));
+
+        }
         this.onDrag(); 
       },
       click: () => { 
@@ -113,22 +128,20 @@ class ActionnableEvent extends SelectableEvent{
 
   }
   
-  manageAction(actionCode, event) {
-    this.manageAction(actionCode, event, {});
-  }
-
-  manageAction(actionCode, event) {
-    this.pullDataFrom(event);
-    this.actionFunctions[actionCode]();
+  manageAction(actionCode, data) {
+    if(data.event){
+      this.pullDataFrom(data.event);
+    }
+    this.actionFunctions[actionCode](data);
   }
 }
 
 
 
 class RevertableEvent extends ActionnableEvent{
-  manageAction(actionCode, event) {
+  manageAction(actionCode, data) {
     this.saveData();
-    super.manageAction(actionCode,event);
+    super.manageAction(actionCode,data);
     this.clearSavedData();
   }
 

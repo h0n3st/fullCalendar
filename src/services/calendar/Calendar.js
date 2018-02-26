@@ -38,15 +38,24 @@ export class Calendar {
         this.rerenderEvents();
       },
       eventClick: (event) => {
-        this.getEvent(event.id).manageAction('click', event);
+        this.getEvent(event.id).manageAction('click', {event:event});
         this.rerenderEvents();
       },
-      eventDrop: (event) => {
-        this.getEvent(event.id).manageAction('drag', event);
+      eventDrop: (event, delta) => {
+
+        const eventsToMove = [this.getEvent(event.id)];
+
+        if(this.getSelectedEvents().some((currEvent) => currEvent.id == event.id)){
+          eventsToMove.pop();
+          this.getSelectedEvents().forEach((event) => eventsToMove.push(event));
+        }
+        eventsToMove.forEach((currEvent) => currEvent.manageAction('drag', {delta:delta}));
+
+        //this.getEvent(event.id).manageAction('drag', {delta:delta});
         this.rerenderEvents();
       },
       eventResize: (event) => {
-        this.getEvent(event.id).manageAction('resize', event);
+        this.getEvent(event.id).manageAction('resize', {event:event});
         this.rerenderEvents();
       }
     }
