@@ -24,10 +24,10 @@ export default {
 
         calendar.unselectEvents();
         if(eventIsInitiallySelected){
-          event.unselect();
+          event.manageAction("unselect");
         }
         else{
-          event.select();
+          event.manageAction("select");
         }
       },
       onSelection(event){
@@ -56,7 +56,7 @@ export default {
         } 
         else {
           calendar.unselectEvents();
-          eventsWithin.forEach((event) => event.select());
+          eventsWithin.forEach((event) => event.manageAction("select"));
         }
       }
     });
@@ -74,22 +74,19 @@ export default {
   },
 
   mounted() {
-
-
-
     this.calendar.print({
       header: {
         left: 'prev, next, today',
         center: 'title',
-        right: 'agendaWeek, agendaDay'
+        right: 'agendaWeek, agendaDay, listWeek'
       },
+      defaultView: 'agendaWeek',
       businessHours: true,
       minTime: '7:00',
       maxTime: '20:00',
       slotDuration: '00:15:00',
       slotLabelInterval: '01:00:00',
       allDaySlot: false,
-      defaultView: 'agendaWeek',
       selectable: true,
       eventOverlap: true,
       editable: true

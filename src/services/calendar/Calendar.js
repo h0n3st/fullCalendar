@@ -4,9 +4,7 @@ export class Calendar {
   constructor(selector) {
     this.htmlSelector = selector;
     this.events = [];
-    this.views = [];
     this.defaultView = null;
-    this.builder = null;
     this.printed = false;
     this.calendarFunctions = {};
   }
@@ -28,13 +26,15 @@ export class Calendar {
         this.reprint();
       },
       select: (start, end) => {
+
+        this.selector.fullCalendar('unselect');
+
         const eventsWithin = this.getEventsWithin(start, end);
 
         if(this.calendarFunctions.onSelection){
           this.calendarFunctions.onSelection(this, start, end, eventsWithin);
         }
 
-        this.selector.fullCalendar('unselect');
         this.rerenderEvents();
       },
       eventClick: (event) => {
@@ -42,20 +42,11 @@ export class Calendar {
         this.rerenderEvents();
       },
       eventDrop: (event, delta) => {
-
-        const eventsToMove = [this.getEvent(event.id)];
-
-        if(this.getSelectedEvents().some((currEvent) => currEvent.id == event.id)){
-          eventsToMove.pop();
-          this.getSelectedEvents().forEach((event) => eventsToMove.push(event));
-        }
-        eventsToMove.forEach((currEvent) => currEvent.manageAction('drag', {delta:delta}));
-
-        //this.getEvent(event.id).manageAction('drag', {delta:delta});
+        this.getEvent(event.id).manageAction('drag', {delta:delta});
         this.rerenderEvents();
       },
-      eventResize: (event) => {
-        this.getEvent(event.id).manageAction('resize', {event:event});
+      eventResize: (event, delta) => {
+        this.getEvent(event.id).manageAction('resize', {delta:delta});
         this.rerenderEvents();
       }
     }
@@ -103,7 +94,7 @@ export class Calendar {
   }
 
   unselectEvents() {
-    this.getSelectedEvents().forEach((event) => event.unselect());
+    this.getSelectedEvents().forEach((event) => event.manageAction("unselect"));
   }
 
   addEvent(event) {

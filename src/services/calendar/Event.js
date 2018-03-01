@@ -1,9 +1,22 @@
 
-class AbstractEvent{
+export class CalendarEvent{
   constructor(calendar) {
     this.calendar = calendar;
     this.editable = false;
     this.initialColor = null;
+
+    this.modified = false;
+
+    this.selected = false;
+
+    this.onActionFunctions = {
+      onDrag:[],
+      onResize:[],
+      onClick:[],
+      onInitialize:[],
+      onSelection:[],
+      onUnselection:[]
+    };
   }
 
   setId(id) { 
@@ -39,9 +52,7 @@ class AbstractEvent{
       this.setProperty('initialColor', color);
     }
   }
-  setProperty(key, value) {
-    this[key] = value;
-  }
+
   isInitialColor() {
     return this.color == this.initialColor;
   }
@@ -53,26 +64,12 @@ class AbstractEvent{
       this[key] = jsonEvent[key];
     }
   }
-}
 
-class InitializableEvent extends AbstractEvent{
-  constructor(calendar){
-    super(calendar);
-  }
-
-  onInitialize() {}
-}
-
-class RenderableEvent extends InitializableEvent{
-  constructor(calendar) {
-    super(calendar);
-    this.modified = false;
-  }
   setProperty(key,value) {
     if(this[key] != value) {
       this.setMustBeRendered(true);
     }
-    super.setProperty(key,value);
+    this[key] = value;
   }
   setMustBeRendered(mustRender) {
     this.modified = mustRender;
@@ -80,81 +77,113 @@ class RenderableEvent extends InitializableEvent{
   needsRendering() {
     return this.modified;
   }
-}
-
-class SelectableEvent extends RenderableEvent{
-  constructor(calendar) {
-    super(calendar); 
-    this.selected = false;
-  }
 
   select() {
     this.setProperty('selected', true);
-    this.onSelection();
   }
   unselect() {
     this.setProperty('selected', false);
-    this.onUnselection();
   }
-
-  onSelection(){ }
-
-  onUnselection(){ }
 
   isSelected() {
     return this.selected;
   }
-}
 
-class ActionnableEvent extends SelectableEvent{
-  constructor(calendar){
-    super(calendar);
-    this.actionFunctions = {
-      drag: (data) => { 
-
-        if(data.delta){
-
-          var appendToDate = (date, append) => {
-            date = new Date(date);
-            append = new Date(append);
-            
-            const newDate = new Date(date.getTime() + append.getTime());
-            return newDate.toISOString();
-          }
-
-          this.setStart(appendToDate(this.start, data.delta));
-          this.setEnd(appendToDate(this.end, data.delta));
-
-        }
-        this.onDrag(); 
-      },
-      click: () => { 
-        this.onClick(); 
-      },
-      resize: () =>  { 
-        this.onResize(); 
-      }
-    };
-
-    this.overloadedOnActionFunctions = {};
-
-  }
-  
   manageAction(actionCode, data) {
+
+    if (!data){
+      data = {};
+    }
+
+    this.saveData();
+
     if(data.event){
       this.pullDataFrom(data.event);
     }
+
+    this.actionFunctions = {
+      drag: (data) => { 
+        this.manageDrag(data);
+      },
+      click: (data) => { 
+        this.manageClick(data); 
+      },
+      resize: (data) =>  { 
+        this.manageResize(data); 
+      },
+      select: (data) => {
+        this.manageSelection(data);
+      },
+      unselect: (data) => {
+        this.manageUnselection(data);
+      }
+    };
+
     this.actionFunctions[actionCode](data);
-  }
-}
 
-
-
-class RevertableEvent extends ActionnableEvent{
-  manageAction(actionCode, data) {
-    this.saveData();
-    super.manageAction(actionCode,data);
     this.clearSavedData();
+  }
+
+  manageDrag(data){
+    
+    const delta = data.delta;
+
+    this.setStart(appendToDate(this.start, delta));
+    this.setEnd(appendToDate(this.end, delta));
+    
+    this.propagateActionToOtherSelectedEvents("drag", data);
+
+    this.onDrag(delta); 
+  }
+
+  manageClick(data){
+    this.onClick();
+  }
+
+  manageResize(data){
+    if(data.delta){
+      const delta = data.delta;
+      this.setEnd(appendToDate(this.end, delta));
+    }
+
+    if(data.length){
+      const length = data.length;
+      this.setEnd(appendToDate(this.start, length));
+    }
+
+    const newLength = getDateDelta(this.start, this.end);
+
+    this.propagateActionToOtherSelectedEvents("resize", {length:newLength});
+    
+    this.onResize(getDateDelta(this.start, this.end));
+  }
+
+  manageSelection(data){
+    this.select();
+    this.onSelection();
+  }
+  
+  manageUnselection(data){
+    this.unselect();
+    this.onUnselection();
+  }
+
+  propagateActionToOtherSelectedEvents(actionCode, data){
+
+    if(this.actionPropagated){
+      return;
+    }
+
+    this.actionPropagated = true;
+
+    this.calendar.getSelectedEvents().filter((event) => !event.actionPropagated).forEach((event) => {
+      event.actionPropagated = true;
+      event.manageAction(actionCode, data);
+    });
+    
+    this.actionPropagated = false;
+
+    this.calendar.getSelectedEvents().forEach((event) => event.actionPropagated = false);
   }
 
   saveData() {
@@ -169,54 +198,58 @@ class RevertableEvent extends ActionnableEvent{
   clearSavedData() {
     this.initialData = undefined;
   }
+
   revert() {
     this.pullDataFrom(this.initialData);
     this.setMustBeRendered(true);
   }
-}
-
-class OverloadableEvent extends RevertableEvent{
-  constructor(calendar){
-    super(calendar);
-    this.onActionFunctions = {};
-  }
 
   overloadOnActionFunction(name, func){
-    this.onActionFunctions[name] = func;
+    this.onActionFunctions[name].push(func);
   }
   onDrag(){
-    if(this.onActionFunctions.onDrag){
-      this.onActionFunctions.onDrag(this, this.calendar);
-    }
+    if(this.onActionFunctions.onDrag.forEach((func) => {
+      func(this, this.calendar)
+    }));
   }
   onResize(){
-    if(this.onActionFunctions.onResize){
-      this.onActionFunctions.onResize(this, this.calendar);
-    }
+    if(this.onActionFunctions.onResize.forEach((func) => {
+      func(this, this.calendar)
+    }));
   }
   onClick(){
-    if(this.onActionFunctions.onClick){
-      this.onActionFunctions.onClick(this, this.calendar);
-    }
+    if(this.onActionFunctions.onClick.forEach((func) => {
+      func(this, this.calendar)
+    }));
   }
   onInitialize(){
-    if(this.onActionFunctions.onInitialize){
-      this.onActionFunctions.onInitialize(this, this.calendar);
-    }
+    if(this.onActionFunctions.onInitialize.forEach((func) => {
+      func(this, this.calendar)
+    }));
   }
   onSelection(){
-    if(this.onActionFunctions.onSelection){
-      this.onActionFunctions.onSelection(this, this.calendar);
-    }
+    if(this.onActionFunctions.onSelection.forEach((func) => {
+      func(this, this.calendar)
+    }));
   }
   onUnselection(){
-    if(this.onActionFunctions.onUnselection){
-      this.onActionFunctions.onUnselection(this, this.calendar);
-    }
+    if(this.onActionFunctions.onUnselection.forEach((func) => {
+      func(this, this.calendar);
+    }));
   }
 }
 
+function appendToDate(date, append){
+  date = new Date(date);
+  append = new Date(append);
+  
+  const newDate = new Date(date.getTime() + append.getTime());
+  return newDate.toISOString();
+}
 
+function getDateDelta(start, end){
+  const startDate = new Date(start);
+  const endDate = new Date(end);
 
-export class CalendarEvent extends OverloadableEvent{
+  return endDate.getTime() - startDate.getTime();
 }
