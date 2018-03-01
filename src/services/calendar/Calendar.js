@@ -6,7 +6,9 @@ export class Calendar {
     this.events = [];
     this.defaultView = null;
     this.printed = false;
-    this.calendarFunctions = {};
+    this.calendarFunctions = {
+      onSelection:[]
+    };
   }
 
   print(calendarSettings) {
@@ -31,10 +33,9 @@ export class Calendar {
 
         const eventsWithin = this.getEventsWithin(start, end);
 
-        if(this.calendarFunctions.onSelection){
-          this.calendarFunctions.onSelection(this, start, end, eventsWithin);
-        }
-
+        this.calendarFunctions.onSelection.forEach((func) => {
+          func(this, start, end, eventsWithin);
+        });
         this.rerenderEvents();
       },
       eventClick: (event) => {
@@ -57,11 +58,12 @@ export class Calendar {
     this.printed = true;
 
   }
-  setCalendarFunctions(calendarFunctions){
 
-    for(const key in calendarFunctions){
-      this.calendarFunctions[key] = calendarFunctions[key];
+  addCalendarFunction(key, func){
+    if(!this.calendarFunctions[key]){
+      this.calendarFunctions[key] = [];
     }
+    this.calendarFunctions[key].push(func);
   }
 
   getHighestEventId() {
@@ -114,11 +116,8 @@ export class Calendar {
   rerenderEvents() {
 
     const eventsToRender = this.events.filter((event) => event.needsRendering());
-
     eventsToRender.forEach((event) => this.selector.fullCalendar('removeEvents', event.id))
-
     this.selector.fullCalendar('renderEvents', eventsToRender);
-
     eventsToRender.forEach((event) => event.setMustBeRendered(false));
   }
 
@@ -126,5 +125,13 @@ export class Calendar {
   reprint() {
     this.events.forEach((event) => event.setMustBeRendered(true));
     this.rerenderEvents();
+  }
+
+  maxEventDuration(newDuration){
+    if(newDuration){
+      this.maxduration = newDuration;
+    }
+
+    return newDuration;
   }
 }

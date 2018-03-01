@@ -10,12 +10,24 @@ export class CalendarWrapper {
 
     this.builder = null;
     this.staticBuilder = null;
+    this.editableBuilder = null;
   }
 
   print(printSettings){
+    
+    this.initializeBuilders();
+    //Needs to be after builder creations
     this.setParameters();
 
-    this.builder = new EventBuilder(this.calendar, {
+    this.initializeCalendarFunctions();
+
+    const finalPrintSettings = this.generateCalendarSettings(printSettings);
+
+    this.calendar.print(finalPrintSettings);
+  }
+
+  initializeBuilders(){
+    this.editableBuilder = new EventBuilder(this.calendar, {
       onInitialize: (event, calendar) => {
         event.setEditable();
         event.setColor(this.editableColor());
@@ -47,40 +59,39 @@ export class CalendarWrapper {
         event.unselect();
       }
     });
+  }
 
-    this.calendar.setCalendarFunctions({
-      onSelection: (calendar, start, end, eventsWithin) => {
-        if(eventsWithin.length === 0) {
+  initializeCalendarFunctions(){
 
-          const startDate = new Date(start);
-          const endDate = new Date(end);
+    this.calendar.addCalendarFunction("onSelection", (calendar, start, end, eventsWithin) => {
 
-          const differenceInMs = endDate - startDate;
-          const THREE_HOURS = 1000 * 60 * 60 * 3;
-          if(differenceInMs < THREE_HOURS){
+      calendar.unselectEvents();
 
-            const id = calendar.getHighestEventId() + 1;
+      if(eventsWithin.length === 0 && this.builder) {
 
-            if(this.canCreateStaticEvents()){
-              this.addStaticEvent(id, start, end);
-            }
-            else{
-              this.addEditableEvent(id,start,end);
-            }
-          }
-        } 
-        else {
+        const id = calendar.getHighestEventId() + 1;
 
-          if(!this.canSelectMultiple()){
-            eventsWithin.length = 1;
-          }
+        const event = this.builder.createEvent(id,start,end);
 
-          calendar.unselectEvents();
-          eventsWithin.forEach((event) => event.manageAction('select'));
+        const differenceInMs = event.getDuration();
+        const differenceInMins = differenceInMs / 1000 / 60;
+
+        if(this.validEventDuration(differenceInMins) && this.builder){
+          this.calendar.addEvent(event);
         }
-      }
-    });
+      } 
+      else {
 
+        if(!this.canSelectMultiple()){
+          eventsWithin.length = 1;
+        }
+
+        eventsWithin.forEach((event) => event.manageAction('select'));
+      }
+      
+    });
+  }
+  generateCalendarSettings(printSettings){
     const basePrintSettings = {
       header: {
         left: 'prev, next, today',
@@ -105,7 +116,11 @@ export class CalendarWrapper {
       }
     }
 
-    this.calendar.print(basePrintSettings);
+    return basePrintSettings;
+  }
+
+  addEvent(id, start, end, title){
+    this.calendar.addEvent(this.builder.createEvent(id, start, end, title));
   }
 
   addStaticEvent(id, start, end, title){
@@ -129,7 +144,7 @@ export class CalendarWrapper {
     for(let i = 0 ; i < baseAttributes.length; i++){
       let name = baseAttributes.item(i).name;
       let value = baseAttributes.item(i).value;
-      console.log(name, value);
+
       this.parameters[name] = (value === '') ? true : value;
     }
   }
@@ -144,18 +159,29 @@ export class CalendarWrapper {
       'static-color' : 'darkgrey',
       'select-multiple' : false,
       'create-events' : false,
-      'create-events-static' : false
+      'create-events-static' : false,
+      'max-event-duration' : 180
     }
 
     
     for(let key in baseValues){
       if(!this.parameters[key]){
-        console.log(this.parameters[key]);
         this.parameters[key] = baseValues[key];
       }
     }
 
-    console.log(this.parameters);
+    if(this.parameters['create-events']){
+      this.builder = this.editableBuilder;
+    }
+
+    if(this.parameters['create-events-static']){
+      this.builder = this.staticBuilder;
+    }
+  }
+
+  validEventDuration(durationInMinutes){
+    const maxDuration = parseInt(this.parameters['max-event-duration']);
+    return durationInMinutes <= maxDuration;
   }
 
   selectedColor(){

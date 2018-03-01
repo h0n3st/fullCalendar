@@ -67,6 +67,10 @@ export class CalendarEvent{
     this.setProperty('color', this.initialColor);
   }
   
+  getDuration(){
+    return getDateDelta(this.start, this.end);
+  }
+
   setMustBeRendered(mustRender) {
     this.modified = mustRender;
   }
@@ -134,7 +138,9 @@ export class CalendarEvent{
     this.setStart(appendToDate(this.start, delta));
     this.setEnd(appendToDate(this.end, delta));
     
-    this.propagateActionToOtherSelectedEvents("drag", data);
+    if(this.isSelected()){
+      this.propagateActionToOtherSelectedEvents("drag", data);
+    }
 
     this.onDrag(delta); 
   }
@@ -156,7 +162,9 @@ export class CalendarEvent{
 
     const newLength = getDateDelta(this.start, this.end);
 
-    this.propagateActionToOtherSelectedEvents("resize", {length:newLength});
+    if(this.isSelected()){
+      this.propagateActionToOtherSelectedEvents("resize", {length:newLength});
+    }
     
     this.onResize(getDateDelta(this.start, this.end));
   }

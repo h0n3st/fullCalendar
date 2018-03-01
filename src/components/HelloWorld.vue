@@ -7,6 +7,7 @@
         editable-color="orange"
         static-color="blue"
         select-multiple
+        max-event-duration="90"
         ></div>
   </div>
 </template>
