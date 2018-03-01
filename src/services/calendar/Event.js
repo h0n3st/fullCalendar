@@ -19,6 +19,8 @@ export class CalendarEvent{
     };
   }
 
+  //PUBLIC FUNCTIONS
+
   setId(id) { 
     this.setProperty('id', id);
   }
@@ -46,6 +48,11 @@ export class CalendarEvent{
   setEditable() {
     this.setProperty('editable', true); 
   }
+
+  setEditable(value) {
+    this.setProperty('editable', value); 
+  }
+
   setColor(color) {
     this.setProperty('color', color);
     if (!this.initialColor) {
@@ -59,18 +66,7 @@ export class CalendarEvent{
   reinitializeColor() {
     this.setProperty('color', this.initialColor);
   }
-  pullDataFrom(jsonEvent) {
-    for(const key in jsonEvent) {
-      this[key] = jsonEvent[key];
-    }
-  }
-
-  setProperty(key,value) {
-    if(this[key] != value) {
-      this.setMustBeRendered(true);
-    }
-    this[key] = value;
-  }
+  
   setMustBeRendered(mustRender) {
     this.modified = mustRender;
   }
@@ -87,6 +83,11 @@ export class CalendarEvent{
 
   isSelected() {
     return this.selected;
+  }
+
+  revert() {
+    this.pullDataFrom(this.initialData);
+    this.setMustBeRendered(true);
   }
 
   manageAction(actionCode, data) {
@@ -123,6 +124,8 @@ export class CalendarEvent{
 
     this.clearSavedData();
   }
+
+  //PRIVATE
 
   manageDrag(data){
     
@@ -199,43 +202,57 @@ export class CalendarEvent{
     this.initialData = undefined;
   }
 
-  revert() {
-    this.pullDataFrom(this.initialData);
-    this.setMustBeRendered(true);
-  }
-
   overloadOnActionFunction(name, func){
     this.onActionFunctions[name].push(func);
   }
+
   onDrag(){
     if(this.onActionFunctions.onDrag.forEach((func) => {
       func(this, this.calendar)
     }));
   }
+
   onResize(){
     if(this.onActionFunctions.onResize.forEach((func) => {
       func(this, this.calendar)
     }));
   }
+
   onClick(){
     if(this.onActionFunctions.onClick.forEach((func) => {
       func(this, this.calendar)
     }));
   }
+
   onInitialize(){
     if(this.onActionFunctions.onInitialize.forEach((func) => {
       func(this, this.calendar)
     }));
   }
+
   onSelection(){
     if(this.onActionFunctions.onSelection.forEach((func) => {
       func(this, this.calendar)
     }));
   }
+
   onUnselection(){
     if(this.onActionFunctions.onUnselection.forEach((func) => {
       func(this, this.calendar);
     }));
+  }
+
+  pullDataFrom(jsonEvent) {
+    for(const key in jsonEvent) {
+      this[key] = jsonEvent[key];
+    }
+  }
+
+  setProperty(key,value) {
+    if(this[key] != value) {
+      this.setMustBeRendered(true);
+    }
+    this[key] = value;
   }
 }
 
