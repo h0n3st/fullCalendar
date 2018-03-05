@@ -123,8 +123,6 @@ export default {
   },
   mounted() {
 
-
-
     this.calendar.print({
       header: {
         left: 'prev, next, today',

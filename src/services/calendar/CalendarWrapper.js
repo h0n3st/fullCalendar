@@ -90,6 +90,18 @@ export class CalendarWrapper {
       }
       
     });
+
+    this.calendar.addCalendarFunction("onAddition", (calendar, event) => {
+
+      console.log('Event ' + event.id + ' has been added');
+      
+    });
+
+    this.calendar.addCalendarFunction("onRemoval", (calendar, event) => {
+
+      console.log('Event ' + event.id + ' has been removed');
+      
+    });
   }
   generateCalendarSettings(printSettings){
     const basePrintSettings = {

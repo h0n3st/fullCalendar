@@ -6,8 +6,10 @@ export class Calendar {
     this.events = [];
     this.defaultView = null;
     this.printed = false;
-    this.calendarFunctions = {
-      onSelection:[]
+    this.calendarActions = {
+      onSelection:[],
+      onAddition:[],
+      onRemoval:[]
     };
   }
 
@@ -33,9 +35,8 @@ export class Calendar {
 
         const eventsWithin = this.getEventsWithin(start, end);
 
-        this.calendarFunctions.onSelection.forEach((func) => {
-          func(this, start, end, eventsWithin);
-        });
+        this.callAction('onSelection', {start:start, end:end, eventsWithin:eventsWithin});
+
         this.rerenderEvents();
       },
       eventClick: (event) => {
@@ -60,10 +61,12 @@ export class Calendar {
   }
 
   addCalendarFunction(key, func){
-    if(!this.calendarFunctions[key]){
-      this.calendarFunctions[key] = [];
+    if(!this.calendarActions[key]){
+      console.log("There is no '" + key + "' calendar function");
+      return;
     }
-    this.calendarFunctions[key].push(func);
+
+    this.calendarActions[key].push(func);
   }
 
   getHighestEventId() {
@@ -101,12 +104,21 @@ export class Calendar {
 
   addEvent(event) {
     this.events.push(event);
+
+    if(this.printed){
+      this.callAction('onAddition', {event:event});
+    }
   }
 
   removeEvent(event) {
+
     const id = event.id;
+    const calendarEvent = this.getEvent(id);
+
     this.events = this.events.filter((currEvent) => currEvent.id != id);
     this.selector.fullCalendar('removeEvents', id);
+
+    this.callAction('onRemoval', {event:calendarEvent});
   }
 
   removeSelectedEvents(){
@@ -116,8 +128,16 @@ export class Calendar {
   rerenderEvents() {
 
     const eventsToRender = this.events.filter((event) => event.needsRendering());
-    eventsToRender.forEach((event) => this.selector.fullCalendar('removeEvents', event.id))
-    this.selector.fullCalendar('renderEvents', eventsToRender);
+
+    const TOO_MANY_INDIVIDUAL_EVENTS = 10;
+    if(eventsToRender.length > TOO_MANY_INDIVIDUAL_EVENTS){
+      this.selector.fullCalendar('removeEvents');
+      this.selector.fullCalendar('renderEvents', this.events);
+    }
+    else{
+      eventsToRender.forEach((event) => this.selector.fullCalendar('removeEvents', event.id));
+      this.selector.fullCalendar('renderEvents', eventsToRender);
+    }
     eventsToRender.forEach((event) => event.setMustBeRendered(false));
   }
 
@@ -133,5 +153,20 @@ export class Calendar {
     }
 
     return newDuration;
+  }
+
+  callAction(actionCode, data){
+    const actionCallbacks = this.calendarActions[actionCode];
+
+    let actioncall = (func) => func(this, data);
+
+    if(actionCode == 'onSelection'){
+      actioncall = (func) => func(this, data.start, data.end, data.eventsWithin);
+    }
+    else if(actionCode == 'onAddition' || actionCode == 'onRemoval'){
+      actioncall = (func) => func(this, data.event);
+    }
+
+    actionCallbacks.forEach(actioncall);
   }
 }
