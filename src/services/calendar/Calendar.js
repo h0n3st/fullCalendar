@@ -9,7 +9,8 @@ export class Calendar {
     this.calendarActions = {
       onSelection:[],
       onAddition:[],
-      onRemoval:[]
+      onRemoval:[],
+      load:[]
     };
   }
 
@@ -18,6 +19,9 @@ export class Calendar {
       this.reprint();
       return;
     }
+
+    this.callAction('load');
+
     this.selector = $(this.htmlSelector);
     calendarSettings.editable = true;
     calendarSettings.selectable = true;
@@ -156,6 +160,10 @@ export class Calendar {
   }
 
   callAction(actionCode, data){
+    if(!data){
+      data = {};
+    }
+
     const actionCallbacks = this.calendarActions[actionCode];
 
     let actioncall = (func) => func(this, data);

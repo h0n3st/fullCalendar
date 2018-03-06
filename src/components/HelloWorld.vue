@@ -22,8 +22,8 @@ export default {
   created() {
     this.calendar = new CalendarWrapper("#calendar");
   },
-  data:{
-    calendar:null
+  data: () => {
+    return {calendar:this.calendar};
   },
 
   mounted() {

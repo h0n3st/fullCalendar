@@ -35,11 +35,10 @@ export class CalendarEvent{
   }
 
   isWithin(start, end){
-    const startTime = (new Date(start)).getTime();
-    const endTime = (new Date(end)).getTime();
-
-    const eventStartTime = (new Date(this.start)).getTime();
-    const eventEndTime = (new Date(this.end)).getTime();
+    const startTime = getEpochTime(start);
+    const endTime = getEpochTime(end);
+    const eventStartTime = getEpochTime(this.start);
+    const eventEndTime = getEpochTime(this.end);
 
     return (eventStartTime > startTime && eventStartTime < endTime) || 
           (eventEndTime > startTime && eventEndTime < endTime);
@@ -277,4 +276,9 @@ function getDateDelta(start, end){
   const endDate = new Date(end);
 
   return endDate.getTime() - startDate.getTime();
+}
+
+function getEpochTime(date){
+  const actualDate = new Date(date);
+  return actualDate.getTime();
 }

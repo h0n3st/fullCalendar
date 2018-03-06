@@ -51,7 +51,7 @@ export default {
         else {
           calendar.unselectEvents();
         }
-      }
+      },
     });
     
     this.populateCalendar(this.pullCalendarData());

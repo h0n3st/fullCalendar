@@ -102,6 +102,38 @@ export class CalendarWrapper {
       console.log('Event ' + event.id + ' has been removed');
       
     });
+
+    this.calendar.addCalendarFunction('load', (calendar) => {
+
+      /*
+      const url = '/api/specialty-appointments';
+
+      const doctorId = 70;
+      const specialtyId = 20;
+      const status = 0;
+
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 7);
+
+      const data = {
+        start_date: startDate.toISOString(),
+        end_date:   endDate.toISOString(),
+        doctor_id : doctorId,
+        specialty_id : specialtyId,
+        status:0,
+        is_telemedicine:0
+      };
+
+      $.get(url, data, (data) => {
+        const eventData = data.data;
+
+        eventData.forEach((event) => {
+
+        });
+      });
+      */
+    });
   }
   generateCalendarSettings(printSettings){
     const basePrintSettings = {
