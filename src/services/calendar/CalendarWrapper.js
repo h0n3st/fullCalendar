@@ -27,12 +27,14 @@ export class CalendarWrapper {
   }
 
   initializeBuilders(){
-    this.editableBuilder = new EventBuilder(this.calendar, {
-      onInitialize: (event, calendar) => {
+    this.editableBuilder = new EventBuilder(this.calendar);
+
+    this.editableBuilder.appendActionCallback('onInitialize', (event, calendar) => {
         event.setEditable();
         event.setColor(this.editableColor());
-      },
-      onClick: (event, calendar) =>{
+    });
+
+    this.editableBuilder.appendActionCallback('onClick',  (event, calendar) =>{
         const eventIsInitiallySelected = event.isSelected();
 
         calendar.unselectEvents();
@@ -42,23 +44,24 @@ export class CalendarWrapper {
         else{
           event.manageAction('select');
         }
-      },
-      onSelection : (event) => {
-        event.setColor(this.selectedColor());
-      },
-      onUnselection : (event) => {
-        event.reinitializeColor();
-      }
     });
 
-    this.staticBuilder = new EventBuilder(this.calendar, {
-      onInitialize: (event, calendar) => {
-        event.setColor(this.staticColor());
-      },
-      onSelection: (event) => {
-        event.unselect();
-      }
+    this.editableBuilder.appendActionCallback('onSelection', (event) => {
+        event.setColor(this.selectedColor());
     });
+    this.editableBuilder.appendActionCallback('onUnselection', (event) => {
+        event.reinitializeColor();
+    });
+    
+
+    this.staticBuilder = new EventBuilder(this.calendar);
+    this.staticBuilder.appendActionCallback('onInitialize', (event, calendar) => {
+        event.setColor(this.staticColor());
+    });
+    this.staticBuilder.appendActionCallback('onSelection',  (event) => {
+        event.unselect();
+    });
+    
   }
 
   initializeCalendarFunctions(){

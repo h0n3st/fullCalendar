@@ -145,7 +145,6 @@ export class Calendar {
     eventsToRender.forEach((event) => event.setMustBeRendered(false));
   }
 
-  //Fully reprint events, shouldn't be used
   reprint() {
     this.events.forEach((event) => event.setMustBeRendered(true));
     this.rerenderEvents();

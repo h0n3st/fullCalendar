@@ -59,6 +59,10 @@ export class CalendarEvent{
     }
   }
 
+  setInitialColor(color) {
+    this.setProperty('initialColor', color);
+  }
+
   isInitialColor() {
     return this.color == this.initialColor;
   }

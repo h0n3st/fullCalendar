@@ -8,55 +8,25 @@
 <script>
 import {Calendar} from '@/services/calendar/Calendar'
 import {EventBuilder} from '@/services/calendar/EventBuilder'
+import {SelectableCalendarFactory} from '@/services/calendar/SelectableCalendarFactory'
 
 
 export default {
   name: 'PatientCalendar',
   created() {
-    this.calendar = new Calendar("#calendar");
-    this.builder = new EventBuilder(this.calendar, {
-      onInitialize: (event, calendar) => {
-        event.setColor("blue");
-      },
-      onClick: (event, calendar) =>{
-        const eventIsInitiallySelected = event.isSelected();
 
-        calendar.unselectEvents();
-        if(eventIsInitiallySelected){
-          event.unselect();
-        }
-        else{
-          event.select();
-        }
-      },
-      onSelection(event){
-        event.setColor("green");
-      },
-      onUnselection(event){
-        event.reinitializeColor();
-      }
-    });
+    const factory = new SelectableCalendarFactory();
 
-    this.takenBuilder = new EventBuilder(this.calendar, {
-      onInitialize: (event) =>{
-        event.setColor("red");
-      }
-    });
-
-    this.calendar.setCalendarFunctions({
-      onSelection: function(calendar, start, end, eventsWithin){
-        if(eventsWithin.length > 0) {
-          eventsWithin[0].select();
-        } 
-        else {
-          calendar.unselectEvents();
-        }
-      },
+    this.calendar = factory.buildCalendar("#calendar");
+    this.builder = factory.buildEventBuilder(this.calendar);
+    
+    this.takenBuilder = factory.buildEventBuilder(this.calendar);
+    this.takenBuilder.appendActionCallback('onInitialize', (event) => {
+      event.setColor('green');
+      event.setInitialColor('green');
     });
     
     this.populateCalendar(this.pullCalendarData());
-
-
 
   },
   data:{
