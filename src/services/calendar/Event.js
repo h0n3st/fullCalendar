@@ -2,20 +2,57 @@
 export class CalendarEvent{
   constructor(calendar) {
     this.calendar = calendar;
-    this.editable = false;
-    this.initialColor = null;
-
-    this.modified = false;
-
-    this.selected = false;
 
     this.onActionFunctions = {
-      onDrag:[],
-      onResize:[],
-      onClick:[],
-      onInitialize:[],
-      onSelection:[],
-      onUnselection:[]
+      drag:[],
+      resize:[],
+      click:[],
+      initialize:[],
+      select:[],
+      unselect:[]
+    };
+
+    this.dataToPull = [
+      'start', 'end', 'color', 'editable'
+    ];
+
+    this.actionFunctions = {
+      drag: { 
+        baseFunction : (data) => { 
+          this.manageDrag(data);
+        },
+        additionnalFunctions : []
+      },
+      click: {
+        baseFunction : (data) => { 
+          this.manageClick(data); 
+        },
+        additionnalFunctions : []
+      },
+      resize: {
+        baseFunction : (data) =>  { 
+          this.manageResize(data); 
+        },
+        additionnalFunctions : []
+      },
+      select: {
+        baseFunction : (data) => {
+          this.manageSelection(data);
+        },
+        additionnalFunctions : []
+      },
+      unselect: {
+        baseFunction : (data) => {
+          this.manageUnselection(data);
+        },
+        additionnalFunctions : []
+      },
+      initialize: {
+        baseFunction : (data) => {
+          this.manageInitialization(data);
+        },
+        additionnalFunctions : []
+      }
     };
   }
 
@@ -28,24 +65,24 @@ export class CalendarEvent{
     this.setProperty('title', title);   
   }
   setStart(start) {
-    this.setProperty('start', start);   
+    const dateStart = new Date(start);
+    this.setProperty('start', dateStart.toISOString());   
   }
   setEnd(end) {
-    this.setProperty('end', end);     
+    const dateEnd = new Date(end);
+    this.setProperty('end', dateEnd.toISOString());     
   }
 
-  isWithin(start, end){
-    const startTime = getEpochTime(start);
-    const endTime = getEpochTime(end);
-    const eventStartTime = getEpochTime(this.start);
-    const eventEndTime = getEpochTime(this.end);
-
-    return (eventStartTime > startTime && eventStartTime < endTime) || 
-          (eventEndTime > startTime && eventEndTime < endTime);
+  getLength(){
+    return getDateDelta(this.start, this.end) / 1000 / 60;
   }
 
-  setEditable() {
-    this.setProperty('editable', true); 
+  isWithin(start, end) {
+
+    return dateIsWithin(this.start, start, end) ||
+          dateIsWithin(this.end, start, end) ||
+          dateIsWithin(start, this.start, this.end) ||
+          dateIsWithin(end, this.start, this.end);
   }
 
   setEditable(value) {
@@ -55,7 +92,7 @@ export class CalendarEvent{
   setColor(color) {
     this.setProperty('color', color);
     if (!this.initialColor) {
-      this.setProperty('initialColor', color);
+      this.setInitialColor(color);
     }
   }
 
@@ -70,10 +107,11 @@ export class CalendarEvent{
     this.setProperty('color', this.initialColor);
   }
   
-  getDuration(){
+  getDuration() {
     return getDateDelta(this.start, this.end);
   }
 
+  //Manage rendering
   setMustBeRendered(mustRender) {
     this.modified = mustRender;
   }
@@ -81,15 +119,20 @@ export class CalendarEvent{
     return this.modified;
   }
 
-  select() {
-    this.setProperty('selected', true);
+  setSelectable(value) {
+    this.setProperty('selectable', value);
   }
-  unselect() {
-    this.setProperty('selected', false);
+
+  isSelectable() {
+    return this.selectable;
   }
 
   isSelected() {
     return this.selected;
+  }
+
+  setSelected(value) {
+    this.setProperty('selected', value);
   }
 
   revert() {
@@ -97,94 +140,120 @@ export class CalendarEvent{
     this.setMustBeRendered(true);
   }
 
+  select(data) {
+    this.manageAction('select',data);
+  }
+  unselect(data) {
+    this.manageAction('unselect', data);
+  }
+
+  drag(data) {
+    this.manageAction('drag', data);
+  }
+
+  //Data takes a length (for a fixed length) or delta (for a delta modification to length) parameter
+  resize(data) {
+    this.manageAction('resize', data);
+  }
+
+  click(data) {
+    this.manageAction('click', data);
+  }
+
+  initialize(data) {
+    this.manageAction('initialize', data);
+  }
+
+  /////////////////////////////////////////////////////////////////////////
+  ///PRIVATE
+
   manageAction(actionCode, data) {
 
-    if (!data){
+    if (!data) {
       data = {};
     }
 
     this.saveData();
 
-    if(data.event){
+    if(data.event) {
       this.pullDataFrom(data.event);
     }
 
-    this.actionFunctions = {
-      drag: (data) => { 
-        this.manageDrag(data);
-      },
-      click: (data) => { 
-        this.manageClick(data); 
-      },
-      resize: (data) =>  { 
-        this.manageResize(data); 
-      },
-      select: (data) => {
-        this.manageSelection(data);
-      },
-      unselect: (data) => {
-        this.manageUnselection(data);
-      }
-    };
-
-    this.actionFunctions[actionCode](data);
+    //Call the basic action managers
+    if(this.actionFunctions[actionCode].baseFunction){
+      this.actionFunctions[actionCode].baseFunction(data);
+    }
+    else{
+      console.log('Bad basic action manager : ', actionCode);
+    }
 
     this.clearSavedData();
   }
 
-  //PRIVATE
-
-  manageDrag(data){
+  manageDrag(data) {
     
     const delta = data.delta;
 
     this.setStart(appendToDate(this.start, delta));
     this.setEnd(appendToDate(this.end, delta));
     
-    if(this.isSelected()){
+    if(this.isSelected()) {
       this.propagateActionToOtherSelectedEvents("drag", data);
     }
+    this.onAction('drag', delta);
 
-    this.onDrag(delta); 
   }
 
-  manageClick(data){
-    this.onClick();
+  manageClick(data) {
+    this.onAction('click', data);
   }
 
-  manageResize(data){
-    if(data.delta){
+  manageResize(data) {
+    if(data.delta) {
       const delta = data.delta;
       this.setEnd(appendToDate(this.end, delta));
     }
 
-    if(data.length){
+    if(data.length) {
       const length = data.length;
       this.setEnd(appendToDate(this.start, length));
     }
 
-    const newLength = getDateDelta(this.start, this.end);
-
-    if(this.isSelected()){
-      this.propagateActionToOtherSelectedEvents("resize", {length:newLength});
+    if(this.isSelected()) {
+      this.propagateActionToOtherSelectedEvents('resize', {
+          length : getDateDelta(this.start, this.end)
+        });
     }
-    
-    this.onResize(getDateDelta(this.start, this.end));
+    this.onAction('resize', getDateDelta(this.start, this.end));
   }
 
-  manageSelection(data){
-    this.select();
-    this.onSelection();
+  manageSelection(data) {
+    if(this.isSelectable()) {
+      this.setProperty('selected', true);
+      this.onAction('select', data);
+    }
   }
   
-  manageUnselection(data){
-    this.unselect();
-    this.onUnselection();
+  manageUnselection(data) {
+    if(this.isSelectable()) {
+      this.setProperty('selected', false);
+      this.onAction('unselect', data);
+    }
   }
 
-  propagateActionToOtherSelectedEvents(actionCode, data){
+  manageInitialization(data) {
+    this.setInitialColor(null);
+    this.setSelected(false);
+    this.setEditable(false);
+    this.setSelectable(false);
 
-    if(this.actionPropagated){
+    this.onAction('initialize', data);
+
+  }
+
+  propagateActionToOtherSelectedEvents(actionCode, data) {
+
+    if(this.actionPropagated) {
       return;
     }
 
@@ -213,50 +282,28 @@ export class CalendarEvent{
     this.initialData = undefined;
   }
 
-  overloadOnActionFunction(name, func){
-    this.onActionFunctions[name].push(func);
+  overloadOnActionFunction(name, func) {
+    if(this.actionFunctions[name].additionnalFunctions){
+      this.actionFunctions[name].additionnalFunctions.push(func);
+    }
+    else{
+      console.log('Bad action name : ', name);
+    }
   }
 
-  onDrag(){
-    if(this.onActionFunctions.onDrag.forEach((func) => {
-      func(this, this.calendar)
-    }));
-  }
-
-  onResize(){
-    if(this.onActionFunctions.onResize.forEach((func) => {
-      func(this, this.calendar)
-    }));
-  }
-
-  onClick(){
-    if(this.onActionFunctions.onClick.forEach((func) => {
-      func(this, this.calendar)
-    }));
-  }
-
-  onInitialize(){
-    if(this.onActionFunctions.onInitialize.forEach((func) => {
-      func(this, this.calendar)
-    }));
-  }
-
-  onSelection(){
-    if(this.onActionFunctions.onSelection.forEach((func) => {
-      func(this, this.calendar)
-    }));
-  }
-
-  onUnselection(){
-    if(this.onActionFunctions.onUnselection.forEach((func) => {
-      func(this, this.calendar);
-    }));
+  onAction(actionCode, data) {
+    if(this.actionFunctions[actionCode].additionnalFunctions) {
+      this.actionFunctions[actionCode].additionnalFunctions.forEach((func) => {
+        func(this, this.calendar, data);
+      });
+    }
+    else{
+      console.log('bad action name', actionCode);
+    }
   }
 
   pullDataFrom(jsonEvent) {
-    for(const key in jsonEvent) {
-      this[key] = jsonEvent[key];
-    }
+    this.dataToPull.forEach((key) => this[key] = jsonEvent[key]);
   }
 
   setProperty(key,value) {
@@ -267,7 +314,7 @@ export class CalendarEvent{
   }
 }
 
-function appendToDate(date, append){
+function appendToDate(date, append) {
   date = new Date(date);
   append = new Date(append);
   
@@ -275,14 +322,23 @@ function appendToDate(date, append){
   return newDate.toISOString();
 }
 
-function getDateDelta(start, end){
+function getDateDelta(start, end) {
   const startDate = new Date(start);
   const endDate = new Date(end);
 
   return endDate.getTime() - startDate.getTime();
 }
 
-function getEpochTime(date){
+function getEpochTime(date) {
   const actualDate = new Date(date);
   return actualDate.getTime();
+}
+
+function dateIsWithin(date, start, end) {
+
+  const startTime = getEpochTime(start);
+  const endTime = getEpochTime(end);
+  const dateTime = getEpochTime(date);
+
+  return (dateTime > startTime && dateTime < endTime);
 }

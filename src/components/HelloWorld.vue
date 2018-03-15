@@ -1,31 +1,24 @@
 <template>
 
   <div class=wrapper>
-    <div id="calendar" 
-        create-events
-        selected-color="black"
-        editable-color="orange"
-        static-color="blue"
-        select-multiple
-        max-event-duration="90"
-        ></div>
+    <div id="calendar"></div>
   </div>
 </template>
 
 <script>
-import {CalendarWrapper} from '@/services/calendar/CalendarWrapper'
+import {EditableCalendarFactory} from '@/services/calendar/EditableCalendarFactory'
 
 
 
 export default {
   name: 'HelloWorld',
   created() {
-    this.calendar = new CalendarWrapper("#calendar");
+    const factory = new EditableCalendarFactory('blue', 'black', 30);
+    this.calendar = factory.buildCalendar("#calendar");
   },
   data: () => {
     return {calendar:this.calendar};
   },
-
   mounted() {
     
      window.addEventListener('keyup', (event) => {
@@ -35,7 +28,23 @@ export default {
       }
     });
 
-    this.calendar.print();
+    this.calendar.print({
+      header: {
+        left: 'prev, next, today',
+        center: 'title',
+        right: 'agendaWeek, agendaDay, listWeek'
+      },
+      defaultView: 'agendaWeek',
+      businessHours: true,
+      minTime: '7:00',
+      maxTime: '20:00',
+      slotDuration: '00:15:00',
+      slotLabelInterval: '01:00:00',
+      allDaySlot: false,
+      selectable: true,
+      eventOverlap: true,
+      editable: true
+    });
   }
 }
 </script>

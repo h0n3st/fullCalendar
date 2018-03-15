@@ -22,7 +22,7 @@ export class EventBuilder {
     this.fillEvent(event, id, start, end, title);
     this.applyActionFunctions(event);
 
-    event.onInitialize();
+    event.initialize();
     
     return event;
   }
@@ -37,7 +37,12 @@ export class EventBuilder {
 
   applyActionFunctions(event){
     for(const key in this.eventFunctions){
-      this.eventFunctions[key].forEach((func) => event.overloadOnActionFunction(key, func));
+      if(this.eventFunctions[key]){
+        this.eventFunctions[key].forEach((func) => event.overloadOnActionFunction(key, func));
+      }
+      else{
+        console.log('Bad action function name in builder : ', key);
+      }
     }
   }
 }

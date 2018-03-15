@@ -44,15 +44,15 @@ export class Calendar {
         this.rerenderEvents();
       },
       eventClick: (event) => {
-        this.getEvent(event.id).manageAction('click', {event:event});
+        this.getEvent(event.id).click({event:event});
         this.rerenderEvents();
       },
       eventDrop: (event, delta) => {
-        this.getEvent(event.id).manageAction('drag', {delta:delta});
+        this.getEvent(event.id).drag({delta:delta});
         this.rerenderEvents();
       },
       eventResize: (event, delta) => {
-        this.getEvent(event.id).manageAction('resize', {delta:delta});
+        this.getEvent(event.id).resize({delta:delta});
         this.rerenderEvents();
       }
     }
@@ -87,11 +87,7 @@ export class Calendar {
   }
 
   getEventsWithin(start, end) {
-
-    const startTime = (new Date(start)).getTime();
-    const endTime = (new Date(end)).getTime();
-
-    return this.events.filter((event) => event.isWithin(startTime, endTime));
+    return this.events.filter((event) => event.isWithin(start, end));
   }
 
   getEvent(id) {  
@@ -103,7 +99,7 @@ export class Calendar {
   }
 
   unselectEvents() {
-    this.getSelectedEvents().forEach((event) => event.manageAction("unselect"));
+    this.getSelectedEvents().forEach((event) => event.unselect());
   }
 
   addEvent(event) {

@@ -7,40 +7,44 @@ export class SelectableCalendarFactory extends CalendarFactory {
 		const calendar = super.buildCalendar(selector);
 
 		calendar.addCalendarFunction('onSelection', (calendar, start, end, eventsWithin) => {
-
-			console.log(start.toString(), end.toString(), eventsWithin);
-
+				
 			calendar.unselectEvents();
-			if(eventsWithin.length > 0){
-				eventsWithin[0].manageAction('select');
+
+			const firstSelectableEvent = eventsWithin.find((event) => event.isSelectable());
+			if(firstSelectableEvent) {
+				firstSelectableEvent.select();
 			}
 		});
 
 		return calendar;
-
 	}
 
 	buildEventBuilder(calendar){
 		const builder = super.buildEventBuilder(calendar);
 
-		builder.appendActionCallback('onClick',  (event, calendar) =>{
+		builder.appendActionCallback('click',  (event, calendar) =>{
 	        const eventIsInitiallySelected = event.isSelected();
 
 	        calendar.unselectEvents();
 	        if(eventIsInitiallySelected){
-	          event.manageAction('unselect');
+	          event.unselect();
 	        }
 	        else{
-	          event.manageAction('select');
+	          event.select();
 	        }
 	    });
 
-	    builder.appendActionCallback('onSelection', (event) =>  {
+	    builder.appendActionCallback('select', (event) =>  {
 	    	event.setColor('black');
 	    });
 
-	    builder.appendActionCallback('onUnselection', (event) => {
+	    builder.appendActionCallback('unselect', (event) => {
 	    	event.reinitializeColor();
+	    });
+
+	    builder.appendActionCallback('initialize', (event) => {
+	    	event.setSelectable(true);
+	    	event.setColor('blue');
 	    });
 
 		return builder;

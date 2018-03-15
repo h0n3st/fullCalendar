@@ -29,36 +29,38 @@ export class CalendarWrapper {
   initializeBuilders(){
     this.editableBuilder = new EventBuilder(this.calendar);
 
-    this.editableBuilder.appendActionCallback('onInitialize', (event, calendar) => {
-        event.setEditable();
+    this.editableBuilder.appendActionCallback('initialize', (event, calendar) => {
+        event.setEditable(true);
+        event.setSelectable(true);
         event.setColor(this.editableColor());
     });
 
-    this.editableBuilder.appendActionCallback('onClick',  (event, calendar) =>{
+    this.editableBuilder.appendActionCallback('click',  (event, calendar) =>{
         const eventIsInitiallySelected = event.isSelected();
 
         calendar.unselectEvents();
         if(eventIsInitiallySelected){
-          event.manageAction('unselect');
+          event.unselect();
         }
         else{
-          event.manageAction('select');
+          event.select();
         }
     });
 
-    this.editableBuilder.appendActionCallback('onSelection', (event) => {
+    this.editableBuilder.appendActionCallback('select', (event) => {
         event.setColor(this.selectedColor());
     });
-    this.editableBuilder.appendActionCallback('onUnselection', (event) => {
+    this.editableBuilder.appendActionCallback('unselect', (event) => {
         event.reinitializeColor();
     });
     
 
     this.staticBuilder = new EventBuilder(this.calendar);
-    this.staticBuilder.appendActionCallback('onInitialize', (event, calendar) => {
+    this.staticBuilder.appendActionCallback('initialize', (event, calendar) => {
         event.setColor(this.staticColor());
+
     });
-    this.staticBuilder.appendActionCallback('onSelection',  (event) => {
+    this.staticBuilder.appendActionCallback('select',  (event) => {
         event.unselect();
     });
     
@@ -89,7 +91,7 @@ export class CalendarWrapper {
           eventsWithin.length = 1;
         }
 
-        eventsWithin.forEach((event) => event.manageAction('select'));
+        eventsWithin.forEach((event) => event.select());
       }
       
     });

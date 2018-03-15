@@ -21,63 +21,49 @@ export default {
     this.builder = factory.buildEventBuilder(this.calendar);
     
     this.takenBuilder = factory.buildEventBuilder(this.calendar);
-    this.takenBuilder.appendActionCallback('onInitialize', (event) => {
+    this.takenBuilder.appendActionCallback('initialize', (event) => {
       event.setColor('green');
       event.setInitialColor('green');
+      event.setSelectable(false);
     });
     
     this.populateCalendar(this.pullCalendarData());
 
   },
-  data:{
-    calendar:null,
-    builder:null,
-    takenBuilder:null
+  data: () => {return {
+      calendar:this.calendar,
+      builder:this.builder,
+      takenBuilder:this.takenBuilder
+    }
   },
   methods:{
     pullCalendarData() {
-      return [
-          {taken:true, start:"2018-02-26 09:00", end:"2018-02-26 09:15", id:856853},
-          {taken:false, start:"2018-02-26 10:00", end:"2018-02-26 10:15", id:12347},
-          {taken:true, start:"2018-02-26 11:00", end:"2018-02-26 11:15", id:231},
-          {taken:false, start:"2018-02-26 11:30", end:"2018-02-26 11:45", id:13},
-          {taken:false, start:"2018-02-26 13:00", end:"2018-02-26 13:15", id:1245},
-          {taken:false, start:"2018-02-26 14:00", end:"2018-02-26 14:15", id:12355},
-          {taken:true, start:"2018-02-26 15:00", end:"2018-02-26 15:15", id:1232},
 
-          {taken:false, start:"2018-02-27 09:00", end:"2018-02-27 09:15", id:32323462},
-          {taken:false, start:"2018-02-27 10:00", end:"2018-02-27 10:15", id:122},
-          {taken:true, start:"2018-02-27 11:00", end:"2018-02-27 11:15", id:2312},
-          {taken:false, start:"2018-02-27 11:30", end:"2018-02-27 11:45", id:132},
-          {taken:false, start:"2018-02-27 13:00", end:"2018-02-27 13:15", id:12452},
-          {taken:false, start:"2018-02-27 14:00", end:"2018-02-27 14:15", id:123552},
-          {taken:true, start:"2018-02-27 15:00", end:"2018-02-27 15:15", id:12322},
+      const calendarData = [];
 
-          {taken:false, start:"2018-02-28 09:00", end:"2018-02-28 09:15", id:11412352362},
-          {taken:false, start:"2018-02-28 10:00", end:"2018-02-28 10:15", id:112},
-          {taken:false, start:"2018-02-28 11:00", end:"2018-02-28 11:15", id:2121},
-          {taken:true, start:"2018-02-28 11:30", end:"2018-02-28 11:45", id:1312},
-          {taken:false, start:"2018-02-28 13:00", end:"2018-02-28 13:15", id:12412},
-          {taken:false, start:"2018-02-28 14:00", end:"2018-02-28 14:15", id:123512},
-          {taken:true, start:"2018-02-28 15:00", end:"2018-02-28 15:15", id:12312},
+      let i = 1;
+      const startDate = new Date();
+      startDate.setHours(6);
+      startDate.setMinutes(0);
 
-          {taken:true, start:"2018-03-01 09:00", end:"2018-03-01 09:15", id:124},
-          {taken:false, start:"2018-03-01 10:00", end:"2018-03-01 10:15", id:1242},
-          {taken:true, start:"2018-03-01 11:00", end:"2018-03-01 11:15", id:21241},
-          {taken:false, start:"2018-03-01 11:30", end:"2018-03-01 11:45", id:1243},
-          {taken:false, start:"2018-03-01 13:00", end:"2018-03-01 13:15", id:121245},
-          {taken:false, start:"2018-03-01 14:00", end:"2018-03-01 14:15", id:1231245},
-          {taken:true, start:"2018-03-01 15:00", end:"2018-03-01 15:15", id:121242},
+      const appendMinutes = (date, minutes) => {
+        date.setTime(date.getTime() + minutes * 1000 * 60);
+        return date;
+      }
 
-          {taken:false, start:"2018-03-02 09:00", end:"2018-03-02 09:15", id:568},
-          {taken:false, start:"2018-03-02 10:00", end:"2018-03-02 10:15", id:1568},
-          {taken:true, start:"2018-03-02 11:00", end:"2018-03-02 11:15", id:23568},
-          {taken:false, start:"2018-03-02 11:30", end:"2018-03-02 11:45", id:1568132435},
-          {taken:true, start:"2018-03-02 13:00", end:"2018-03-02 13:15", id:1245568},
-          {taken:false, start:"2018-03-02 14:00", end:"2018-03-02 14:15", id:1235568},
-          {taken:false, start:"2018-03-02 15:00", end:"2018-03-02 15:15", id:125682}
-          ]
+      while(startDate.getHours() < 14){
 
+        calendarData.push({
+          taken: i % 2 == 1,
+          start: startDate.toISOString(),
+          end : appendMinutes(startDate, 15).toISOString(),
+          id: i++
+        });
+
+        appendMinutes(startDate, 30);
+      }
+
+      return calendarData;
 
     },
     populateCalendar(calendarData){
