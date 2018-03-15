@@ -14,7 +14,7 @@ export default {
   name: 'HelloWorld',
   created() {
     const factory = new EditableCalendarFactory('blue', 'black', 30);
-    this.calendar = factory.buildCalendar("#calendar");
+    this.calendar = factory.getCalendar("#calendar");
   },
   data: () => {
     return {calendar:this.calendar};

@@ -11,10 +11,10 @@ export class EditableCalendarFactory extends CalendarFactory {
 		this.maxDuration = maximumDuration;
 	}
 
-	buildCalendar(selector){
-		const calendar = super.buildCalendar(selector);
+	getCalendar(selector){
+		const calendar = super.getCalendar(selector);
 
-		const builder = this.buildEventBuilder(calendar);
+		const builder = this.getEventBuilder(calendar);
 
 		calendar.addCalendarFunction('onSelection', (calendar, start, end, eventsWithin) => {
 				
@@ -41,8 +41,8 @@ export class EditableCalendarFactory extends CalendarFactory {
 		return calendar;
 	}
 
-	buildEventBuilder(calendar){
-		const builder = super.buildEventBuilder(calendar);
+	getEventBuilder(calendar){
+		const builder = super.getEventBuilder(calendar);
 
 		builder.appendActionCallback('click',  (event, calendar) =>{
 	        const eventIsInitiallySelected = event.isSelected();

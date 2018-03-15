@@ -17,10 +17,10 @@ export default {
 
     const factory = new SelectableCalendarFactory();
 
-    this.calendar = factory.buildCalendar("#calendar");
-    this.builder = factory.buildEventBuilder(this.calendar);
+    this.calendar = factory.getCalendar("#calendar");
+    this.builder = factory.getEventBuilder(this.calendar);
     
-    this.takenBuilder = factory.buildEventBuilder(this.calendar);
+    this.takenBuilder = factory.getEventBuilder(this.calendar);
     this.takenBuilder.appendActionCallback('initialize', (event) => {
       event.setColor('green');
       event.setInitialColor('green');

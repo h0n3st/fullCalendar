@@ -3,8 +3,8 @@ import {Calendar} from './Calendar'
 import {CalendarFactory} from './CalendarFactory'
 
 export class SelectableCalendarFactory extends CalendarFactory {
-	buildCalendar(selector){
-		const calendar = super.buildCalendar(selector);
+	getCalendar(selector){
+		const calendar = super.getCalendar(selector);
 
 		calendar.addCalendarFunction('onSelection', (calendar, start, end, eventsWithin) => {
 				
@@ -19,8 +19,8 @@ export class SelectableCalendarFactory extends CalendarFactory {
 		return calendar;
 	}
 
-	buildEventBuilder(calendar){
-		const builder = super.buildEventBuilder(calendar);
+	getEventBuilder(calendar){
+		const builder = super.getEventBuilder(calendar);
 
 		builder.appendActionCallback('click',  (event, calendar) =>{
 	        const eventIsInitiallySelected = event.isSelected();

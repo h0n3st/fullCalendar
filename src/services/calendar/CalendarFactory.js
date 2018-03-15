@@ -2,11 +2,11 @@ import {EventBuilder} from './EventBuilder'
 import {Calendar} from './Calendar'
 
 export class CalendarFactory {
-	buildCalendar(selector){
+	getCalendar(selector){
 		return new Calendar(selector);
 	}
 
-	buildEventBuilder(calendar){
+	getEventBuilder(calendar){
 		return new EventBuilder(calendar);
 	}
 }
