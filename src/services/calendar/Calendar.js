@@ -129,7 +129,7 @@ export class Calendar {
 
     const eventsToRender = this.events.filter((event) => event.needsRendering());
 
-    const TOO_MANY_INDIVIDUAL_EVENTS = 10;
+    const TOO_MANY_INDIVIDUAL_EVENTS = 5;
     if(eventsToRender.length > TOO_MANY_INDIVIDUAL_EVENTS){
       this.selector.fullCalendar('removeEvents');
       this.selector.fullCalendar('renderEvents', this.events);

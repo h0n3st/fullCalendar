@@ -11,7 +11,7 @@ import {EditableCalendarFactory} from '@/services/calendar/EditableCalendarFacto
 
 
 export default {
-  name: 'HelloWorld',
+  name: 'StaffCalendar',
   created() {
     const factory = new EditableCalendarFactory('blue', 'black', 30);
     this.calendar = factory.getCalendar("#calendar");
